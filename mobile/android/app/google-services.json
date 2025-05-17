@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "147567794739",
+    "project_id": "tranporte-rural",
+    "storage_bucket": "tranporte-rural.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147567794739:android:7b623e65cd12c2d668a146",
+        "android_client_info": {
+          "package_name": "com.example.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnjUoVd5HoTU00GTqNx6AK8jyhxyAz9is"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
