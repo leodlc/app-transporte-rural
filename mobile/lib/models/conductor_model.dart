@@ -6,6 +6,7 @@ class Conductor {
   final String telefono;
   final String password;
   final String? vehiculo;
+  final String? cooperativa; // Nueva propiedad
   final String? tokenFCM;
   final bool activo;
   final String rol;
@@ -18,6 +19,7 @@ class Conductor {
     required this.telefono,
     required this.password,
     this.vehiculo,
+    this.cooperativa, // Nueva propiedad
     this.tokenFCM,
     this.activo = true,
     this.rol = "conductor",
@@ -31,6 +33,7 @@ class Conductor {
       "telefono": telefono,
       "password": password,
       "vehiculo": vehiculo,
+      "cooperativa": cooperativa, // Nueva propiedad
       "tokenFCM": tokenFCM,
       "activo": activo,
       "rol": rol,
@@ -46,6 +49,7 @@ class Conductor {
       telefono: json["telefono"],
       password: json["password"],
       vehiculo: json["vehiculo"],
+      cooperativa: json["cooperativa"], // Nueva propiedad
       tokenFCM: json["tokenFCM"],
       activo: json["activo"] ?? true,
       rol: json["rol"],

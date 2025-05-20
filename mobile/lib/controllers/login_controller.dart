@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile/controllers/admin_controller.dart';
+import 'package:mobile/views/admin/main_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../views/cliente/main_cliente.dart';
 import '../views/conductor/main_conductor.dart';
@@ -14,6 +16,8 @@ class LoginController {
   final passwordController = TextEditingController();
   final ClienteController _clienteController = ClienteController();
   final ConductorController _conductorController = ConductorController();
+  final AdminController _adminController = AdminController();
+
 
   Future<void> login(BuildContext context) async {
     String username = usernameController.text.trim();
@@ -36,11 +40,11 @@ class LoginController {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        _showMessage(context, "Inicio de sesión exitoso");
 
         String token = data["token"];
         String role = data["usuario"]["rol"];
         String userId = data["usuario"]["id"];
+        bool isActive = data["usuario"]["activo"];
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', token);
@@ -51,10 +55,17 @@ class LoginController {
           await _clienteController.fetchClienteData(userId);
         } else if (role == "conductor") {
           await _conductorController.fetchConductorData(userId);
+        } else if (role == "admin") {
+          await _adminController.fetchAdminData(userId);
         }
 
         Future.delayed(Duration.zero, () {
-          _navigateToRoleScreen(context, role);
+          if (isActive) {
+            _showMessage(context, "Inicio de sesión exitoso");
+            _navigateToRoleScreen(context, role);
+          } else {
+            _showMessage(context, "Usuario bloqueado");
+          }
         });
       } else {
         _showMessage(
@@ -93,6 +104,9 @@ class LoginController {
       } else if (role == "conductor") {
         Navigator.pushReplacement(
             context, MaterialPageRoute(builder: (_) => const MainConductor()));
+      } else if (role == "admin") {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => const MainAdmin()));
       }
     });
   }

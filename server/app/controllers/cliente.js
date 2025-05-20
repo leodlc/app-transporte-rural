@@ -23,12 +23,7 @@ const getClientById = async (req, res) => {
     let client = null;
 
     try {
-      client = await Cliente.findById(id)
-        .populate({
-          path: 'direccion',
-          populate: { path: 'ubicacion' }
-        })
-        .exec();
+      client = await Cliente.findById(id);
     } catch (populateError) {
       console.warn("Populate falló, retornando cliente sin populate:", populateError.message);
       client = await Cliente.findById(id); // fallback sin populate
@@ -90,10 +85,10 @@ const createClient = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Validar si `direccion` es un ObjectId válido, si no, dejarlo como `null`
-    let direccionValida = null;
-    if (direccion && mongoose.Types.ObjectId.isValid(direccion)) {
-      direccionValida = direccion;
-    }
+    //let direccionValida = null;
+    //if (direccion && mongoose.Types.ObjectId.isValid(direccion)) {
+    //  direccionValida = direccion;
+    //}
 
     // Crear el cliente con la contraseña encriptada
     const nuevoCliente = new Cliente({
@@ -101,8 +96,7 @@ const createClient = async (req, res) => {
       username,
       telefono,
       email,
-      password: hashedPassword, //  Guardar la contraseña encriptada
-      direccion: direccionValida //  Asignar `null` si `direccion` es inválida
+      password: hashedPassword, //  Guardar la contraseña encriptada      
     });
 
     const clienteGuardado = await nuevoCliente.save();

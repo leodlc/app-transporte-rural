@@ -22,9 +22,15 @@ class ConductorController {
         await prefs.setString('username', data['username']);
         await prefs.setString('email', data['email']);
         await prefs.setString('telefono', data['telefono']);
-        await prefs.setString(
-            'vehiculo', data['vehiculo'] ?? "Sin vehículo asignado");
+        await prefs.setString('vehiculo', data['vehiculo'] ?? "Sin vehículo asignado");
         await prefs.setString('role', data['rol']);
+
+        // Guardar la cooperativa si existe
+        if (data['cooperativa'] != null) {
+          await prefs.setString('cooperativa', data['cooperativa'].toString());
+        }
+      } else {
+        print("Error al obtener conductor: ${response.body}");
       }
     } catch (e) {
       print("Error obteniendo datos del conductor: $e");
@@ -32,8 +38,7 @@ class ConductorController {
   }
 
   Future<bool> registerConductor(Conductor conductor) async {
-    final url =
-        Uri.parse("${ApiConfig.baseUrl}/api/1.0/conductor/createDriver");
+    final url = Uri.parse("${ApiConfig.baseUrl}/api/1.0/conductor/createDriver");
 
     try {
       final response = await http.post(
@@ -50,6 +55,23 @@ class ConductorController {
       }
     } catch (e) {
       print("Error de conexión al servidor: $e");
+      return false;
+    }
+  }
+
+  Future<bool> updateConductor(String id, Map<String, dynamic> fieldsToUpdate) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/api/1.0/conductor/$id");
+
+    try {
+      final response = await http.patch(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(fieldsToUpdate),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Error al actualizar conductor: $e");
       return false;
     }
   }
