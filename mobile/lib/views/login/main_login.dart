@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../controllers/login_controller.dart';
 import 'opcion_registro_login.dart';
 
+import '../../widgets/frase_cultural.dart';
+
 class MainLogin extends StatefulWidget {
   const MainLogin({super.key});
 
@@ -11,6 +13,18 @@ class MainLogin extends StatefulWidget {
 
 class _MainLoginState extends State<MainLogin> {
   final LoginController _loginController = LoginController();
+
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(Duration.zero, () {
+      showDialog(
+        context: context,
+        builder: (_) => const FraseCulturalDialog(),
+      );
+    });
+  }
 
   @override
   void dispose() {

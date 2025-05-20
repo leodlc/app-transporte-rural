@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'views/cliente/main_cliente.dart';
 import 'views/conductor/main_conductor.dart';
 
+
+
 Future<void> main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); // Asegura la inicialización de Flutter
@@ -53,6 +55,8 @@ class _MyAppState extends State<MyApp> {
         _role = role;
         _isLoading = false; // La carga terminó
       });
+
+      
     }
   }
 
