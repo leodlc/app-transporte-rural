@@ -9,7 +9,9 @@ class AgregarVehiculo extends StatefulWidget {
 }
 
 class _AgregarVehiculoState extends State<AgregarVehiculo> {
+  final _formKey = GlobalKey<FormState>();
   final AdminController _adminController = AdminController();
+
   final TextEditingController _marcaController = TextEditingController();
   final TextEditingController _modeloController = TextEditingController();
   final TextEditingController _placaController = TextEditingController();
@@ -18,25 +20,17 @@ class _AgregarVehiculoState extends State<AgregarVehiculo> {
   bool _isLoading = false;
 
   Future<void> _crearVehiculo() async {
-    if (_marcaController.text.isEmpty ||
-        _modeloController.text.isEmpty ||
-        _placaController.text.isEmpty ||
-        _rmtController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Todos los campos son obligatorios")),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       _isLoading = true;
     });
 
     final vehiculoData = {
-      "marca": _marcaController.text,
-      "modelo": _modeloController.text,
-      "placa": _placaController.text,
-      "rmt": _rmtController.text,
+      "marca": _marcaController.text.trim(),
+      "modelo": _modeloController.text.trim(),
+      "placa": _placaController.text.trim(),
+      "rmt": _rmtController.text.trim(),
     };
 
     bool success = await _adminController.crearVehiculo(vehiculoData);
@@ -46,8 +40,7 @@ class _AgregarVehiculoState extends State<AgregarVehiculo> {
     });
 
     if (success) {
-      Navigator.pop(
-          context, true); // Devuelve true para actualizar la lista de vehículos
+      Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Vehículo creado exitosamente")),
       );
@@ -63,6 +56,7 @@ class _AgregarVehiculoState extends State<AgregarVehiculo> {
     _marcaController.dispose();
     _modeloController.dispose();
     _placaController.dispose();
+    _rmtController.dispose();
     super.dispose();
   }
 
@@ -72,35 +66,63 @@ class _AgregarVehiculoState extends State<AgregarVehiculo> {
       appBar: AppBar(title: const Text("Agregar Vehículo")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _marcaController,
-              decoration: const InputDecoration(labelText: "Marca"),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _modeloController,
-              decoration: const InputDecoration(labelText: "Modelo"),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _placaController,
-              decoration: const InputDecoration(labelText: "Placa"),
-            ),
-            TextField(
-              controller: _rmtController,
-              decoration: const InputDecoration(labelText: "RMT (Número de habilitación operacional)"),
-            ),
-            const SizedBox(height: 20),
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _crearVehiculo,
-                    child: const Text("Guardar Vehículo"),
-                  ),
-          ],
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _marcaController,
+                decoration: const InputDecoration(labelText: "Marca"),
+                validator: (value) =>
+                    value == null || value.isEmpty ? "Ingrese la marca" : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _modeloController,
+                decoration: const InputDecoration(labelText: "Modelo"),
+                validator: (value) =>
+                    value == null || value.isEmpty ? "Ingrese el modelo" : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _placaController,
+                decoration: const InputDecoration(labelText: "Placa"),
+                validator: (value) {
+                  final placaRegExp = RegExp(r'^[A-Z]{3}-\d{3,4}$');
+                  if (value == null || value.isEmpty) {
+                    return "Ingrese la placa";
+                  } else if (!placaRegExp.hasMatch(value)) {
+                    return "Formato inválido (ej: PQW-1568 o PAW-151)";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _rmtController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: "RMT (Número de habilitación operacional)"),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return "Ingrese el número RMT";
+                  } else if (value.length > 6) {
+                    return "Máximo 6 dígitos permitidos";
+                  } else if (!RegExp(r'^\d{1,6}$').hasMatch(value)) {
+                    return "Solo se permiten números";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _crearVehiculo,
+                      child: const Text("Guardar Vehículo"),
+                    ),
+            ],
+          ),
         ),
       ),
     );

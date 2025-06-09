@@ -66,11 +66,9 @@ class _FormularioCooperativaState extends State<FormularioCooperativa> {
     bool exito = false;
 
     if (widget.cooperativa != null) {
-      // Actualizar
       final id = widget.cooperativa!['_id'];
       exito = await _cooperativaController.updateCooperativa(id, nuevaCoop);
     } else {
-      // Crear
       exito = await _cooperativaController.createCooperativa(nuevaCoop);
     }
 
@@ -86,6 +84,28 @@ class _FormularioCooperativaState extends State<FormularioCooperativa> {
         const SnackBar(content: Text("Error al guardar cooperativa")),
       );
     }
+  }
+
+  String? _validarEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return "Ingrese el email";
+    }
+    final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegExp.hasMatch(value)) {
+      return "Ingrese un email válido";
+    }
+    return null;
+  }
+
+  String? _validarTelefono(String? value) {
+    if (value == null || value.isEmpty) {
+      return "Ingrese el teléfono";
+    }
+    final phoneRegExp = RegExp(r'^\+?\d{10}$');
+    if (!phoneRegExp.hasMatch(value)) {
+      return "Ingrese un teléfono válido";
+    }
+    return null;
   }
 
   @override
@@ -110,7 +130,7 @@ class _FormularioCooperativaState extends State<FormularioCooperativa> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: "Email"),
-                validator: (value) => value!.isEmpty ? "Ingrese el email" : null,
+                validator: _validarEmail,
               ),
               TextFormField(
                 controller: _responsableController,
@@ -125,15 +145,16 @@ class _FormularioCooperativaState extends State<FormularioCooperativa> {
               TextFormField(
                 controller: _telefonoController,
                 decoration: const InputDecoration(labelText: "Teléfono"),
-                validator: (value) => value!.isEmpty ? "Ingrese el teléfono" : null,
+                keyboardType: TextInputType.phone,
+                validator: _validarTelefono,
               ),
               const SizedBox(height: 20),
               _guardando
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                onPressed: _guardarCooperativa,
-                child: Text(esEdicion ? "Actualizar" : "Registrar"),
-              ),
+                      onPressed: _guardarCooperativa,
+                      child: Text(esEdicion ? "Actualizar" : "Registrar"),
+                    ),
             ],
           ),
         ),

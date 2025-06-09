@@ -12,7 +12,10 @@ const ConductorSchema = new mongoose.Schema({
   //pedidosAsignados: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Pedido' }], // Pedidos en curso
   tokenFCM: { type: String }, // Token para recibir notificaciones
   activo: { type: Boolean, default: true },
-  rol: { type: String, enum: ['conductor'], default: 'conductor', required: true } // Campo obligatorio de rol
+  verificationCode: { type: String },
+  rol: { type: String, enum: ['conductor'], default: 'conductor', required: true }, // Campo obligatorio de rol
+  emailVerificado: { type: Boolean, default: false },
+
 }, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Conductor', ConductorSchema);

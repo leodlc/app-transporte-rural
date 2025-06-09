@@ -22,6 +22,7 @@ class _RegistroConductorLoginState extends State<RegistroConductorLogin> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmarPasswordController = TextEditingController();
 
   List<Cooperativa> _cooperativas = [];
   String? _cooperativaSeleccionada;
@@ -79,6 +80,28 @@ class _RegistroConductorLoginState extends State<RegistroConductorLogin> {
     }
   }
 
+  String? _validarEmail(String? value) {
+    if (value == null || value.isEmpty) return "Campo obligatorio";
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    return emailRegex.hasMatch(value) ? null : "Formato de email inválido";
+  }
+
+  String? _validarTelefono(String? value) {
+    if (value == null || value.isEmpty) return "Campo obligatorio";
+    final telefonoRegex = RegExp(r'^\d{10}$');
+    return telefonoRegex.hasMatch(value) ? null : "Teléfono debe tener 10 dígitos numéricos";
+  }
+
+  String? _validarPassword(String? value) {
+    if (value == null || value.isEmpty) return "Campo obligatorio";
+    return value.length < 6 ? "Mínimo 6 caracteres" : null;
+  }
+
+  String? _confirmarPassword(String? value) {
+    if (value == null || value.isEmpty) return "Confirma la contraseña";
+    return value != _passwordController.text ? "Las contraseñas no coinciden" : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,19 +126,25 @@ class _RegistroConductorLoginState extends State<RegistroConductorLogin> {
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: "Email"),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) => value!.isEmpty ? "Campo obligatorio" : null,
+                validator: _validarEmail,
               ),
               TextFormField(
                 controller: _telefonoController,
                 decoration: const InputDecoration(labelText: "Teléfono"),
                 keyboardType: TextInputType.phone,
+                validator: _validarTelefono,
               ),
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: "Contraseña"),
                 obscureText: true,
-                validator: (value) =>
-                value!.length < 6 ? "Mínimo 6 caracteres" : null,
+                validator: _validarPassword,
+              ),
+              TextFormField(
+                controller: _confirmarPasswordController,
+                decoration: const InputDecoration(labelText: "Confirmar Contraseña"),
+                obscureText: true,
+                validator: _confirmarPassword,
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
@@ -133,7 +162,7 @@ class _RegistroConductorLoginState extends State<RegistroConductorLogin> {
                   });
                 },
                 validator: (value) =>
-                value == null ? "Selecciona una cooperativa" : null,
+                    value == null ? "Selecciona una cooperativa" : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(

@@ -24,6 +24,7 @@ class ConductorController {
         await prefs.setString('telefono', data['telefono']);
         await prefs.setString('vehiculo', data['vehiculo'] ?? "Sin vehículo asignado");
         await prefs.setString('role', data['rol']);
+        await prefs.setBool('emailVerificado', data['emailVerificado']);
 
         // Guardar la cooperativa si existe
         if (data['cooperativa'] != null) {

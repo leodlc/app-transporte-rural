@@ -8,10 +8,11 @@ const ClienteSchema = new mongoose.Schema({
   password: { type: String, required: true },
   tokenFCM: { type: String }, // Para notificaciones push
   activo: { type: Boolean, default: true },
-  // Relación con dirección
-  //direccion: { type: mongoose.Schema.Types.ObjectId, ref: 'Direccion', required: false },
-  //pedidos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Pedido' }], // Historial de pedidos
-  rol: { type: String, enum: ['cliente'], default: 'cliente', required: true } // Campo obligatorio de rol
+  rol: { type: String, enum: ['cliente'], default: 'cliente', required: true }, // Campo obligatorio de rol
+  verificationCode: { type: String },
+  emailVerificado: { type: Boolean, default: false },
+
+
 }, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Cliente', ClienteSchema);

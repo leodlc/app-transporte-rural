@@ -5,6 +5,8 @@ import '../../controllers/login_controller.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import 'perfil_cliente.dart';
 import 'transporte_cliente.dart';
+import '../../widgets/verificacion.dart';
+
 
 class MainCliente extends StatefulWidget {
   const MainCliente({super.key});
@@ -29,13 +31,24 @@ class _MainClienteState extends State<MainCliente> {
   }
 
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      nombre = prefs.getString('nombre') ?? "Usuario";
-      email = prefs.getString('email') ?? "email@example.com";
-      rol = prefs.getString('role')?.toUpperCase() ?? "CLIENTE";
+  final prefs = await SharedPreferences.getInstance();
+  setState(() {
+    nombre = prefs.getString('nombre') ?? "Usuario";
+    email = prefs.getString('email') ?? "email@example.com";
+    rol = prefs.getString('role')?.toUpperCase() ?? "CLIENTE";
+  });
+
+  // Aquí decides cuándo mostrar el diálogo, ejemplo si no está verificado
+  bool emailVerificado = prefs.getBool('emailVerificado') ?? false;
+
+  if (!emailVerificado) {
+    // Esperar un frame para evitar error "setState durante build"
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showVerificationDialog(context, email);
     });
   }
+}
+
 
   void _onItemTapped(int index) {
     setState(() {

@@ -4,6 +4,8 @@ import '../../controllers/login_controller.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import 'perfil_conductor.dart';
 import 'solicitudes_conductor.dart';
+import '../../widgets/verificacion.dart';
+
 
 class MainConductor extends StatefulWidget {
   const MainConductor({super.key});
@@ -27,13 +29,23 @@ class _MainConductorState extends State<MainConductor> {
   }
 
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      nombre = prefs.getString('nombre') ?? "Usuario";
-      email = prefs.getString('email') ?? "email@example.com";
-      rol = prefs.getString('role')?.toUpperCase() ?? "CONDUCTOR";
+  final prefs = await SharedPreferences.getInstance();
+  setState(() {
+    nombre = prefs.getString('nombre') ?? "Usuario";
+    email = prefs.getString('email') ?? "email@example.com";
+    rol = prefs.getString('role')?.toUpperCase() ?? "CONDUCTOR";
+  });
+
+  bool emailVerificado = prefs.getBool('emailVerificado') ?? false;
+
+  if (!emailVerificado) {
+    // Mostrar el widget de verificación después de que la pantalla cargue
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showVerificationDialog(context, email);
     });
   }
+}
+
 
   void _onItemTapped(int index) {
     setState(() {

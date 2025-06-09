@@ -22,8 +22,7 @@ class _MainAdminState extends State<MainAdmin> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
   final LoginController _loginController = LoginController();
-  final NotificacionController _notificacionController =
-      NotificacionController();
+/*   final NotificacionController _notificacionController = NotificacionController(); */
 
   final List<Widget> _screens = [
     const ConductoresAdmin(),
@@ -33,7 +32,7 @@ class _MainAdminState extends State<MainAdmin> {
   void initState() {
     super.initState();
     _loadUserData();
-    _actualizarTokenFCM();
+    /* _actualizarTokenFCM(); */
   }
 
   Future<void> _loadUserData() async {
@@ -45,13 +44,13 @@ class _MainAdminState extends State<MainAdmin> {
     });
   }
 
-  Future<void> _actualizarTokenFCM() async {
+  /* Future<void> _actualizarTokenFCM() async {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString('id');
     if (userId != null) {
       await _notificacionController.actualizarTokenAdmin(userId);
     }
-  }
+  } */
 
   void _onItemTapped(int index) {
     setState(() {

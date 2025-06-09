@@ -24,6 +24,7 @@ class ClienteController {
         await prefs.setString('email', data['email']);
         await prefs.setString('telefono', data['telefono']);
         await prefs.setString('role', data['rol']);
+        await prefs.setBool('emailVerificado', data['emailVerificado']);
 
         // Retornar la información del cliente
         return data;
@@ -132,7 +133,5 @@ class ClienteController {
       return false;
     }
   }
-
-
 
 }

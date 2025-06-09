@@ -1,9 +1,9 @@
 const {httpError} = require('../helpers/handleError');
 const Conductor = require('../models/conductor');
-//const Ubicacion = require('../models/ubicacion');
 const bcrypt = require('bcrypt');
+const { sendVerificationEmail } = require('../helpers/mailer');
+const { v4: uuidv4 } = require('uuid');
 //const admin = require('firebase-admin');
-
 // Memoria temporal para evitar actualizar MongoDB en cada cambio de ubicación
 //const ubicacionesTemporales = new Map();
 
@@ -87,44 +87,52 @@ const getDriverByName = async (req, res) => {
 
 
 // Crear un conductor
-// Crear un conductor con contraseña encriptada
 const createDriver = async (req, res) => {
-    try {
-        const { nombre, username, email, telefono, password, tokenFCM, activo, rol, cooperativa} = req.body;
+  try {
+    const { nombre, username, email, telefono, password, tokenFCM, rol, cooperativa } = req.body;
 
-        // Verificar si el email ya está registrado
-        const existingDriver = await Conductor.findOne({ email });
-        if (existingDriver) {
-            return res.status(400).json({ error: 'El email ya está registrado' });
-        }
-
-        // Encriptar la contraseña
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Crear el conductor con la contraseña encriptada
-        const nuevoConductor = new Conductor({
-            nombre,
-            username,
-            cooperativa, // Asignar la cooperativa desde el middleware
-            email,
-            telefono,
-            password: hashedPassword, 
-            tokenFCM,
-            activo,
-            rol
-        });
-
-        const conductorGuardado = await nuevoConductor.save();
-
-        res.status(201).json({
-            message: 'Conductor creado exitosamente',
-            data: conductorGuardado
-        });
-    } catch (e) {
-        console.error("Error en createDriver:", e);
-        httpError(res, e);
+    const existingDriver = await Conductor.findOne({ email });
+    if (existingDriver) {
+      return res.status(400).json({ error: 'El email ya está registrado' });
     }
+
+    const verificationCode = uuidv4().replace(/-/g, '').slice(0, 6).toUpperCase();
+
+    try {
+      await sendVerificationEmail(email, verificationCode);
+    } catch (emailError) {
+      console.error("Error al enviar el email:", emailError);
+      return res.status(500).json({ error: 'Error al enviar el correo de verificación' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const nuevoConductor = new Conductor({
+      nombre,
+      username,
+      cooperativa,
+      email,
+      telefono,
+      password: hashedPassword,
+      tokenFCM,
+      activo: true, // ← importante
+      rol,
+      emailVerificado: false,
+      verificationCode
+    });
+
+    const conductorGuardado = await nuevoConductor.save();
+
+    res.status(201).json({
+      message: 'Conductor creado exitosamente. Se envió un código de verificación al correo.',
+      data: conductorGuardado
+    });
+  } catch (e) {
+    console.error("Error en createDriver:", e);
+    httpError(res, e);
+  }
 };
+
 
 // Actualizar un conductor
 const updateDriver = async (req, res) => {
@@ -286,11 +294,11 @@ const updateDriverFCMToken = async (req, res) => {
         return res.status(404).json({ error: 'Conductor no encontrado' });
       }
   
-      console.log(`✅ Token FCM actualizado para Conductor (ID: ${id}): ${tokenFCM}`);
+      console.log(`Token FCM actualizado para Conductor (ID: ${id}): ${tokenFCM}`);
   
       res.json({ message: 'Token FCM actualizado correctamente', data: updatedDriver });
     } catch (e) {
-      console.error("❌ Error en updateDriverFCMToken:", e);
+      console.error("Error en updateDriverFCMToken:", e);
       httpError(res, e);
     }
   };

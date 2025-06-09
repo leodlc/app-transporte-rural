@@ -1,7 +1,8 @@
 const { httpError } = require('../helpers/handleError');
 const Cliente = require('../models/cliente'); // Importamos el modelo
 const bcrypt = require('bcrypt');
-
+const { sendVerificationEmail } = require('../helpers/mailer');
+const { v4: uuidv4 } = require('uuid');
 
 // Obtener todos los clientes
 const getAllClients = async (req, res) => {
@@ -73,36 +74,45 @@ const getClientByName = async (req, res) => {
 // Crear un cliente con contraseña encriptada
 const createClient = async (req, res) => {
   try {
-    const { nombre, username,direccion, telefono, email, password } = req.body;
+    const { nombre, username, telefono, email, password } = req.body;
 
-    // Verificar si el email ya existe
+    // Validar si el email ya está registrado
     const existingClient = await Cliente.findOne({ email });
     if (existingClient) {
       return res.status(400).json({ error: 'El email ya está registrado' });
     }
 
-    // Encriptar la contraseña
+    // Generar código de verificación
+    const verificationCode = uuidv4().replace(/-/g, '').slice(0, 6).toUpperCase();
+
+    // Enviar correo
+    try {
+      await sendVerificationEmail(email, verificationCode);
+    } catch (emailError) {
+      console.error("Error al enviar el email:", emailError);
+      return res.status(500).json({ error: 'Error al enviar el correo de verificación' });
+    }
+
+    // Encriptar contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Validar si `direccion` es un ObjectId válido, si no, dejarlo como `null`
-    //let direccionValida = null;
-    //if (direccion && mongoose.Types.ObjectId.isValid(direccion)) {
-    //  direccionValida = direccion;
-    //}
-
-    // Crear el cliente con la contraseña encriptada
+    // Crear cliente
     const nuevoCliente = new Cliente({
       nombre,
       username,
       telefono,
       email,
-      password: hashedPassword, //  Guardar la contraseña encriptada      
+      password: hashedPassword,
+      activo: true, // Por defecto, el cliente no está activo
+      emailVerificado: false,
+      verificationCode,
+      // Puedes guardar verificationCode si planeas validarlo más adelante
     });
 
     const clienteGuardado = await nuevoCliente.save();
 
     res.status(201).json({
-      message: 'Cliente creado exitosamente',
+      message: 'Cliente creado exitosamente. Se envió un código de verificación al correo.',
       data: clienteGuardado
     });
   } catch (e) {
