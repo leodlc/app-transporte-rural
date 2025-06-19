@@ -6,7 +6,8 @@ import '../../widgets/custom_bottom_nav.dart';
 import 'perfil_cliente.dart';
 import 'transporte_cliente.dart';
 import '../../widgets/verificacion.dart';
-
+import 'inicio_cliente.dart';
+import '../../utils/keep_alive_wrapper.dart';
 
 class MainCliente extends StatefulWidget {
   const MainCliente({super.key});
@@ -22,7 +23,6 @@ class _MainClienteState extends State<MainCliente> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
   final LoginController _loginController = LoginController();
-  final ClienteController _clienteController = ClienteController();
 
   @override
   void initState() {
@@ -31,24 +31,21 @@ class _MainClienteState extends State<MainCliente> {
   }
 
   Future<void> _loadUserData() async {
-  final prefs = await SharedPreferences.getInstance();
-  setState(() {
-    nombre = prefs.getString('nombre') ?? "Usuario";
-    email = prefs.getString('email') ?? "email@example.com";
-    rol = prefs.getString('role')?.toUpperCase() ?? "CLIENTE";
-  });
-
-  // Aquí decides cuándo mostrar el diálogo, ejemplo si no está verificado
-  bool emailVerificado = prefs.getBool('emailVerificado') ?? false;
-
-  if (!emailVerificado) {
-    // Esperar un frame para evitar error "setState durante build"
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      showVerificationDialog(context, email);
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      nombre = prefs.getString('nombre') ?? "Usuario";
+      email = prefs.getString('email') ?? "email@example.com";
+      rol = prefs.getString('role')?.toUpperCase() ?? "CLIENTE";
     });
-  }
-}
 
+    bool emailVerificado = prefs.getBool('emailVerificado') ?? false;
+
+    if (!emailVerificado) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showVerificationDialog(context, email);
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -95,9 +92,25 @@ class _MainClienteState extends State<MainCliente> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.directions_bus),
+              title: const Text("Transporte"),
+              onTap: () {
+                _onItemTapped(1);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text("Perfil"),
+              onTap: () {
+                _onItemTapped(2);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.settings),
               title: const Text("Configuración"),
-              onTap: () {},
+              onTap: () {}, // Puedes enlazar una pantalla de configuración aquí
             ),
             const Divider(),
             const AboutListTile(
@@ -118,8 +131,9 @@ class _MainClienteState extends State<MainCliente> {
       body: PageView(
         controller: _pageController,
         children: const [
-          TransporteCliente(),
-          PerfilCliente(),
+          KeepAliveWrapper(child: InicioCliente()),
+          KeepAliveWrapper(child: TransporteCliente()),
+          KeepAliveWrapper(child: PerfilCliente()),
         ],
         onPageChanged: (index) {
           setState(() {
@@ -131,6 +145,10 @@ class _MainClienteState extends State<MainCliente> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "Inicio",
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.directions_bus),
             label: "Transporte",

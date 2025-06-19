@@ -5,6 +5,8 @@ import '../../widgets/custom_bottom_nav.dart';
 import 'perfil_conductor.dart';
 import 'solicitudes_conductor.dart';
 import '../../widgets/verificacion.dart';
+import 'inicio_conductor.dart';
+import '../../utils/keep_alive_wrapper.dart';
 
 
 class MainConductor extends StatefulWidget {
@@ -84,6 +86,14 @@ class _MainConductorState extends State<MainConductor> {
               decoration: const BoxDecoration(color: Colors.blue),
             ),
             ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text("Inicio"),
+                onTap: () {
+                  _onItemTapped(0);
+                  Navigator.pop(context);
+                },
+              ),
+            ListTile(
               leading: const Icon(Icons.home),
               title: const Text("Solicitudes"),
               onTap: () {
@@ -115,8 +125,9 @@ class _MainConductorState extends State<MainConductor> {
       body: PageView(
         controller: _pageController,
         children: const [
-          SolicitudesConductor(),
-          PerfilConductor(),
+          KeepAliveWrapper(child: InicioConductor()),
+          KeepAliveWrapper(child: SolicitudesConductor()),
+          KeepAliveWrapper(child: PerfilConductor()),
         ],
         onPageChanged: (index) {
           setState(() {
@@ -124,10 +135,15 @@ class _MainConductorState extends State<MainConductor> {
           });
         },
       ),
+
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "Inicio",
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.assignment),
             label: "Solicitudes",

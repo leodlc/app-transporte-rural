@@ -40,16 +40,17 @@ class LoginController {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-
         String token = data["token"];
         String role = data["usuario"]["rol"];
         String userId = data["usuario"]["id"];
         bool isActive = data["usuario"]["activo"];
+        bool emailVerificado = data["usuario"]["emailVerificado"] ?? false;
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', token);
         await prefs.setString('role', role);
         await prefs.setString('id', userId);
+        await prefs.setBool('emailVerificado', emailVerificado);
 
         if (role == "cliente") {
           await _clienteController.fetchClienteData(userId);
@@ -67,10 +68,8 @@ class LoginController {
             _showMessage(context, "Usuario bloqueado");
           }
         });
-      } else {
-        _showMessage(
-            context, data["message"] ?? "Error en el inicio de sesión");
       }
+
     } catch (e) {
       _showMessage(context, "Error de conexión al servidor");
     }

@@ -25,6 +25,8 @@ class ClienteController {
         await prefs.setString('telefono', data['telefono']);
         await prefs.setString('role', data['rol']);
         await prefs.setBool('emailVerificado', data['emailVerificado']);
+        await prefs.setBool('ubicacionActiva', data['ubicacionActiva']);
+
 
         // Retornar la información del cliente
         return data;
@@ -133,5 +135,22 @@ class ClienteController {
       return false;
     }
   }
+  Future<Map<String, dynamic>?> fetchConductorDataSinShared(String id) async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/api/1.0/conductor/id/$id");
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        return data;
+      } else {
+        print("Error al obtener conductor: ${response.body}");
+      }
+    } catch (e) {
+      print("Error obteniendo datos del conductor: $e");
+    }
+    return null;
+  }
+
 
 }

@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../config/api_config.dart'; // Asegúrate de importar correctamente tu baseUrl
+import '../../controllers/login_controller.dart';
+
 
 /// Formateador personalizado para convertir todo a MAYÚSCULAS
 class UpperCaseTextFormatter extends TextInputFormatter {
@@ -74,7 +76,15 @@ Future<void> showVerificationDialog(BuildContext context, String email) async {
                     },
               child: const Text('Verificar'),
             ),
+            TextButton(
+              onPressed: () {
+                final loginController = LoginController();
+                loginController.logout(context);
+              },
+              child: const Text('Cerrar sesión'),
+            ),
           ],
+
         ),
       );
     },

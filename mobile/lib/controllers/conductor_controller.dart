@@ -25,6 +25,8 @@ class ConductorController {
         await prefs.setString('vehiculo', data['vehiculo'] ?? "Sin vehículo asignado");
         await prefs.setString('role', data['rol']);
         await prefs.setBool('emailVerificado', data['emailVerificado']);
+        await prefs.setBool('ubicacionActiva', data['ubicacionActiva']);
+
 
         // Guardar la cooperativa si existe
         if (data['cooperativa'] != null) {
@@ -76,5 +78,24 @@ class ConductorController {
       return false;
     }
   }
+  Future<List<Map<String, dynamic>>> getConductoresActivos() async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/api/1.0/conductor/activos");
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        print("Error al obtener conductores activos: ${response.body}");
+        return [];
+      }
+    } catch (e) {
+      print("Error al obtener conductores activos: $e");
+      return [];
+    }
+  }
+
 
 }

@@ -74,7 +74,7 @@ const getClientByName = async (req, res) => {
 // Crear un cliente con contraseña encriptada
 const createClient = async (req, res) => {
   try {
-    const { nombre, username, telefono, email, password, direccion, ubicacionActiva, tokenFCM  } = req.body;
+    const { nombre, username, telefono, email, password, ubicacionActiva, tokenFCM  } = req.body;
 
     // Validar si el email ya está registrado
     const existingClient = await Cliente.findOne({ email });
@@ -106,7 +106,6 @@ const createClient = async (req, res) => {
       activo: true, // Por defecto, el cliente no está activo
       emailVerificado: false,
       verificationCode,
-      direccion,
       ubicacionActiva, // Si se proporciona, se establece la ubicación activa
       tokenFCM
       // Puedes guardar verificationCode si planeas validarlo más adelante

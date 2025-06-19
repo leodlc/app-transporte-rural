@@ -92,7 +92,7 @@ const getDriverByName = async (req, res) => {
 // Crear un conductor
 const createDriver = async (req, res) => {
   try {
-    const { nombre, username, email, telefono, password, tokenFCM, rol, cooperativa,ubicacionActiva } = req.body;
+    const { nombre, username, email, telefono, password, tokenFCM, rol, cooperativa, ubicacionActiva } = req.body;
 
     const existingDriver = await Conductor.findOne({ email });
     if (existingDriver) {
@@ -463,6 +463,16 @@ const actualizarUbicacionActiva = async (req, res) => {
     httpError(res, error);
   }
 };
+const getActiveDrivers = async (req, res) => {
+  try {
+    const conductoresActivos = await Conductor.find({ ubicacionActiva: true });
+    res.status(200).json(conductoresActivos);
+  } catch (e) {
+    console.error("Error en getActiveDrivers:", e);
+    httpError(res, e);
+  }
+};
+
 
 module.exports = {
     getAllDrivers,
@@ -473,4 +483,5 @@ module.exports = {
     deleteDriver,
     updateDriverFCMToken,
     actualizarUbicacionActiva,
+    getActiveDrivers,
 };
