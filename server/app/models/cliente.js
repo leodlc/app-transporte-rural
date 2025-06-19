@@ -11,7 +11,9 @@ const ClienteSchema = new mongoose.Schema({
   rol: { type: String, enum: ['cliente'], default: 'cliente', required: true }, // Campo obligatorio de rol
   verificationCode: { type: String },
   emailVerificado: { type: Boolean, default: false },
-
+  direccion: { type: mongoose.Schema.Types.ObjectId, ref: 'Direccion' }, // Relación con dirección
+  ubicacionActiva: { type: Boolean, default: false },
+  
 
 }, { timestamps: true, versionKey: false });
 

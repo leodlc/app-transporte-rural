@@ -1,8 +1,11 @@
 const {httpError} = require('../helpers/handleError');
 const Conductor = require('../models/conductor');
+const Ubicacion = require('../models/ubicacion');
 const bcrypt = require('bcrypt');
 const { sendVerificationEmail } = require('../helpers/mailer');
 const { v4: uuidv4 } = require('uuid');
+const { getSocket } = require('../../config/socket');
+const { firestore } = require('../../config/firebase'); // Importa Firestore si lo necesitas
 //const admin = require('firebase-admin');
 // Memoria temporal para evitar actualizar MongoDB en cada cambio de ubicación
 //const ubicacionesTemporales = new Map();
@@ -89,7 +92,7 @@ const getDriverByName = async (req, res) => {
 // Crear un conductor
 const createDriver = async (req, res) => {
   try {
-    const { nombre, username, email, telefono, password, tokenFCM, rol, cooperativa } = req.body;
+    const { nombre, username, email, telefono, password, tokenFCM, rol, cooperativa,ubicacionActiva } = req.body;
 
     const existingDriver = await Conductor.findOne({ email });
     if (existingDriver) {
@@ -118,7 +121,8 @@ const createDriver = async (req, res) => {
       activo: true, // ← importante
       rol,
       emailVerificado: false,
-      verificationCode
+      verificationCode,
+      ubicacionActiva: false
     });
 
     const conductorGuardado = await nuevoConductor.save();
@@ -397,7 +401,68 @@ const sendPushNotificationToConductor = async (req, res) => {
     }
   };
 */
+const actualizarUbicacionActiva = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { activa, lat, lng } = req.body;
 
+    if (typeof activa === 'undefined' || typeof lat !== 'number' || typeof lng !== 'number') {
+      return res.status(400).json({ error: 'Parámetros incompletos o inválidos (activa, lat, lng)' });
+    }
+
+    const conductor = await Conductor.findById(id);
+    if (!conductor) {
+      return res.status(404).json({ error: 'Conductor no encontrado' });
+    }
+
+    // Actualizar o crear ubicación en MongoDB
+    let ubicacion;
+    if (conductor.ubicacion) {
+      ubicacion = await Ubicacion.findByIdAndUpdate(
+        conductor.ubicacion,
+        { lat, lng },
+        { new: true }
+      );
+    } else {
+      ubicacion = new Ubicacion({ lat, lng });
+      await ubicacion.save();
+      conductor.ubicacion = ubicacion._id;
+    }
+
+    // Actualizar estado
+    conductor.ubicacionActiva = activa;
+    await conductor.save();
+
+    // Emitir por WebSocket
+    const payload = {
+      conductorId: conductor._id.toString(),
+      nombre: conductor.nombre,
+      lat,
+      lng,
+      ubicacionActiva: activa
+    };
+    getSocket().emit('ubicacion-conductor-actualizada', payload);
+    console.log('WebSocket emitido: ubicacion-conductor-actualizada', payload);
+
+    // Guardar en Firestore
+    await firestore.collection('conductoresUbicaciones')
+      .doc(conductor._id.toString())
+      .set({
+        ...payload,
+        actualizado: new Date().toISOString()
+      });
+    
+    console.log(`Firestore actualizado: conductoresUbicaciones/${conductor._id.toString()}`);
+    res.json({
+      message: 'Ubicación y estado actualizados correctamente',
+      data: payload
+    });
+
+  } catch (error) {
+    console.error('Error en actualizarUbicacionActiva:', error);
+    httpError(res, error);
+  }
+};
 
 module.exports = {
     getAllDrivers,
@@ -407,4 +472,5 @@ module.exports = {
     updateDriver,
     deleteDriver,
     updateDriverFCMToken,
+    actualizarUbicacionActiva,
 };

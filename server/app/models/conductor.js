@@ -15,6 +15,8 @@ const ConductorSchema = new mongoose.Schema({
   verificationCode: { type: String },
   rol: { type: String, enum: ['conductor'], default: 'conductor', required: true }, // Campo obligatorio de rol
   emailVerificado: { type: Boolean, default: false },
+  ubicacionActiva: { type: Boolean, default: false },
+
 
 }, { timestamps: true, versionKey: false });
 

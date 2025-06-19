@@ -1,10 +1,13 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
 const { dbConnection } = require('./config/mongo');
-//require('./config/firebase'); // Asegura que Firebase se inicializa
+require('./config/firebase'); // Asegura que Firebase se inicializa
+const { initSocket } = require('./config/socket'); // importar socket
 
 const app = express();
+const server = http.createServer(app); // Crear servidor HTTP
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0'
 
@@ -15,8 +18,10 @@ app.use(express.json());
 app.use('/api/1.0', require('./app/routes'));
 
 dbConnection().then(() => {
-  app.listen(PORT,HOST, () => {
-    console.log(`Server running on port ${PORT}`);
+  const io = initSocket(server); // inicializar socket.io
+
+  server.listen(PORT, HOST, () => {
+    console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
   });
 }).catch(error => {
   console.error('Database connection failed', error);
