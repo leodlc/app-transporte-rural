@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/views/admin/cooperativas_admin.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../controllers/login_controller.dart';
 import '../../widgets/custom_bottom_nav.dart';
-import '../../controllers/notificacion_controller.dart';
-import 'clientes_admin.dart';
 import 'conductores_admin.dart';
-import 'vehiculos_admin.dart'; // ← Importar la nueva pantalla de Vehículos
+import 'clientes_admin.dart';
+import 'vehiculos_admin.dart';
+import 'cooperativas_admin.dart';
 
 class MainAdmin extends StatefulWidget {
   const MainAdmin({super.key});
@@ -22,17 +23,19 @@ class _MainAdminState extends State<MainAdmin> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
   final LoginController _loginController = LoginController();
-/*   final NotificacionController _notificacionController = NotificacionController(); */
 
-  final List<Widget> _screens = [
-    const ConductoresAdmin(),
+  final List<Widget> _screens = const [
+    ConductoresAdmin(),
+    ClientesAdmin(),
+    VehiculosAdmin(),
+    CooperativasAdmin(),
   ];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-    /* _actualizarTokenFCM(); */
+    _setupNotificationTapHandler();
   }
 
   Future<void> _loadUserData() async {
@@ -44,14 +47,6 @@ class _MainAdminState extends State<MainAdmin> {
     });
   }
 
-  /* Future<void> _actualizarTokenFCM() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString('id');
-    if (userId != null) {
-      await _notificacionController.actualizarTokenAdmin(userId);
-    }
-  } */
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -61,6 +56,45 @@ class _MainAdminState extends State<MainAdmin> {
         curve: Curves.easeInOut,
       );
     });
+  }
+
+  void _setupNotificationTapHandler() {
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      final route = message.data['route'];
+      if (route != null) {
+        _navigateFromNotification(route);
+      }
+    });
+
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) {
+        final route = message.data['route'];
+        if (route != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _navigateFromNotification(route);
+          });
+        }
+      }
+    });
+  }
+
+  void _navigateFromNotification(String route) {
+    switch (route) {
+      case 'conductores':
+        _onItemTapped(0);
+        break;
+      case 'clientes':
+        _onItemTapped(1);
+        break;
+      case 'vehiculos':
+        _onItemTapped(2);
+        break;
+      case 'cooperativas':
+        _onItemTapped(3);
+        break;
+      default:
+        debugPrint('Ruta de notificación no reconocida: $route');
+    }
   }
 
   @override
@@ -89,44 +123,35 @@ class _MainAdminState extends State<MainAdmin> {
               decoration: const BoxDecoration(color: Colors.red),
             ),
             ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text("Inicio"),
-              onTap: () {},
+              leading: const Icon(Icons.group),
+              title: const Text("Conductores"),
+              onTap: () {
+                _onItemTapped(0);
+                Navigator.pop(context);
+              },
             ),
             ListTile(
-              leading: const Icon(Icons.person), // Icono de vehículo
+              leading: const Icon(Icons.person),
               title: const Text("Clientes"),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ClientesAdmin(),
-                  ),
-                );
+                _onItemTapped(1);
+                Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.directions_car), // Icono de vehículo
+              leading: const Icon(Icons.directions_car),
               title: const Text("Vehículos"),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const VehiculosAdmin(),
-                  ),
-                );
+                _onItemTapped(2);
+                Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.account_balance), // Icono de vehículo
+              leading: const Icon(Icons.account_balance),
               title: const Text("Cooperativas"),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CooperativasAdmin(),
-                  ),
-                );
+                _onItemTapped(3);
+                Navigator.pop(context);
               },
             ),
             const Divider(),
@@ -153,7 +178,29 @@ class _MainAdminState extends State<MainAdmin> {
             _selectedIndex = index;
           });
         },
-      )
+      ),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.group),
+            label: "Conductores",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: "Clientes",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_car),
+            label: "Vehículos",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance),
+            label: "Cooperativas",
+          ),
+        ],
+      ),
     );
   }
 }

@@ -6,7 +6,7 @@ const ClienteSchema = new mongoose.Schema({
   telefono: { type: String, required: false },
   email: { type: String, unique: true },
   password: { type: String, required: true },
-  tokenFCM: { type: String }, // Para notificaciones push
+  tokenFCM: [{ type: String }], // Para múltiples dispositivos, // Para notificaciones push
   activo: { type: Boolean, default: true },
   rol: { type: String, enum: ['cliente'], default: 'cliente', required: true }, // Campo obligatorio de rol
   verificationCode: { type: String },

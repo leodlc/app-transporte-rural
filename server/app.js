@@ -5,6 +5,7 @@ const http = require('http');
 const { dbConnection } = require('./config/mongo');
 require('./config/firebase'); // Asegura que Firebase se inicializa
 const { initSocket } = require('./config/socket'); // importar socket
+const iniciarJobExpiracionSolicitudes = require('./app/cron/solicitud-expiracion');
 
 const app = express();
 const server = http.createServer(app); // Crear servidor HTTP
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use('/api/1.0', require('./app/routes'));
 
 dbConnection().then(() => {
+  iniciarJobExpiracionSolicitudes();
   const io = initSocket(server); // inicializar socket.io
 
   server.listen(PORT, HOST, () => {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import '../../controllers/cliente_controller.dart';
 import '../../controllers/login_controller.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -8,6 +10,7 @@ import 'transporte_cliente.dart';
 import '../../widgets/verificacion.dart';
 import 'inicio_cliente.dart';
 import '../../utils/keep_alive_wrapper.dart';
+import '../../controllers/notificacion_controller.dart';
 
 class MainCliente extends StatefulWidget {
   const MainCliente({super.key});
@@ -23,12 +26,47 @@ class _MainClienteState extends State<MainCliente> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
   final LoginController _loginController = LoginController();
+  final NotificacionController _notificacionController = NotificacionController();
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _setupNotificationTapHandler();
+    _obtenerYGuardarTokenFCM().then((_) => _registrarTokenFCM());
+
   }
+
+  Future<void> _registrarTokenFCM() async {
+    final prefs = await SharedPreferences.getInstance();
+    final usuarioId = prefs.getString('id');
+    final rol = prefs.getString('role');
+    final token = prefs.getString('fcm_token');
+
+    if (usuarioId != null && rol != null && token != null) {
+      try {
+        await _notificacionController.registrarTokenFCM(
+          usuarioId: usuarioId,
+          rol: rol,
+          tokenFCM: token,
+        );
+        print("Token FCM registrado exitosamente para $rol");
+      } catch (e) {
+        print(" Error registrando token FCM: $e");
+      }
+    }
+  }
+
+  Future<void> _obtenerYGuardarTokenFCM() async {
+    final token = await FirebaseMessaging.instance.getToken();
+    print("FCM Token obtenido (cliente): $token");
+
+    if (token != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('fcm_token', token);
+    }
+  }
+
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -56,6 +94,45 @@ class _MainClienteState extends State<MainCliente> {
         curve: Curves.easeInOut,
       );
     });
+  }
+
+  void _setupNotificationTapHandler() {
+    // App ya abierta y usuario toca la notificación
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      final route = message.data['route'];
+      if (route != null) {
+        _navigateFromNotification(route);
+      }
+    });
+
+    // App cerrada y se abre desde notificación
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
+      if (message != null) {
+        final route = message.data['route'];
+        if (route != null) {
+          // Ejecutar después del primer frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _navigateFromNotification(route);
+          });
+        }
+      }
+    });
+  }
+
+  void _navigateFromNotification(String route) {
+    switch (route) {
+      case 'inicio':
+        _onItemTapped(0);
+        break;
+      case 'transporte':
+        _onItemTapped(1);
+        break;
+      case 'perfil':
+        _onItemTapped(2);
+        break;
+      default:
+        debugPrint('Ruta de notificación no reconocida: $route');
+    }
   }
 
   @override

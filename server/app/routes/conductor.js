@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { getAllDrivers, getDriverByName, getDriverById ,createDriver, updateDriver, deleteDriver, updateDriverFCMToken, actualizarUbicacionActiva, getActiveDrivers } = require('../controllers/conductor');
+const { getAllDrivers, getDriverByName, getDriverById ,createDriver, updateDriver, deleteDriver, updateDriverFCMToken, actualizarUbicacionActiva, getActiveDrivers, clearDriverFCMToken } = require('../controllers/conductor');
 
 router.get('/', getAllDrivers);
 
@@ -28,5 +28,6 @@ router.patch('/:id/ubicacionActiva', actualizarUbicacionActiva);
 //router.post('/:id/sendPushNotification', sendPushNotificationToConductor);
 router.get('/activos', getActiveDrivers);
 
+router.patch('/:id/clear-token', clearDriverFCMToken);
 
 module.exports = router;

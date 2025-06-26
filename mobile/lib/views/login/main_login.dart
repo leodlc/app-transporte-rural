@@ -42,7 +42,7 @@ class _MainLoginState extends State<MainLogin> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
-              'Transporte rural',
+              'RutaMóvil',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 5),

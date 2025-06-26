@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createAdmin, getAdminById, sendPushNotificationToAdmin, updateAdminFCMToken, getAllAdmins } = require('../controllers/admin');
+const { createAdmin, getAdminById, sendPushNotificationToAdmin, updateAdminFCMToken, getAllAdmins, clearAdminFCMToken } = require('../controllers/admin');
 
 router.post('/register', createAdmin); // Ruta para crear un admin
 
@@ -11,5 +11,7 @@ router.post('/:id/sendPushNotification', sendPushNotificationToAdmin);// Ruta pa
 router.patch('/:id/tokenFCM', updateAdminFCMToken); // Ruta para actualizar el tokenFCM de un admin
 
 router.get('/', getAllAdmins); // Ruta para obtener todos los admins
+
+router.patch('/:id/clear-token', clearAdminFCMToken);
 
 module.exports = router;

@@ -37,9 +37,9 @@ class LoginController {
         body: jsonEncode({"username": username, "password": password}),
       );
 
-      final data = jsonDecode(response.body);
-
       if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
         String token = data["token"];
         String role = data["usuario"]["rol"];
         String userId = data["usuario"]["id"];
@@ -68,12 +68,19 @@ class LoginController {
             _showMessage(context, "Usuario bloqueado");
           }
         });
+      } else if (response.statusCode == 401 || response.statusCode == 400) {
+        // Error de credenciales
+        final data = jsonDecode(response.body);
+        String error = data['error'] ?? "Credenciales incorrectas.";
+        _showMessage(context, error);
+      } else {
+        _showMessage(context, "Ocurrió un error inesperado.");
       }
-
     } catch (e) {
       _showMessage(context, "Error de conexión al servidor");
     }
   }
+
 
   Future<void> checkLoginStatus(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
@@ -87,6 +94,38 @@ class LoginController {
 
   void logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString('id');
+    String? role = prefs.getString('role');
+
+    if (userId != null && role != null) {
+      String endpoint;
+
+      switch (role) {
+        case "cliente":
+          endpoint = "/api/1.0/cliente/$userId/clear-token";
+          break;
+        case "conductor":
+          endpoint = "/api/1.0/conductor/$userId/clear-token";
+          break;
+        case "admin":
+          endpoint = "/api/1.0/admin/$userId/clear-token";
+          break;
+        default:
+          endpoint = "";
+      }
+
+      if (endpoint.isNotEmpty) {
+        final url = Uri.parse("${ApiConfig.baseUrl}$endpoint");
+
+        try {
+          await http.patch(url);
+        } catch (e) {
+          print("Error eliminando token FCM del backend: $e");
+        }
+      }
+    }
+
+    // Limpiar almacenamiento local
     await prefs.clear();
 
     Navigator.pushReplacement(
@@ -94,6 +133,7 @@ class LoginController {
       MaterialPageRoute(builder: (_) => const MainLogin()),
     );
   }
+
 
   void _navigateToRoleScreen(BuildContext context, String role) {
     WidgetsBinding.instance.addPostFrameCallback((_) {

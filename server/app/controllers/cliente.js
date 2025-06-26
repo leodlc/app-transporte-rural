@@ -206,6 +206,24 @@ const sendPushNotification = async (req, res) => {
   }
 };
 
+const clearClientFCMToken = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedClient = await Cliente.findByIdAndUpdate(id, { tokenFCM: null }, { new: true });
+
+    if (!updatedClient) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    res.json({ message: 'Token FCM eliminado correctamente', data: updatedClient });
+  } catch (e) {
+    console.error("Error en clearClientFCMToken:", e);
+    httpError(res, e);
+  }
+};
+
+
 module.exports = {
   getAllClients,
   getClientByName,
@@ -214,5 +232,6 @@ module.exports = {
   updateClient,
   deleteClient,
   updateClientFCMToken,
-  sendPushNotification
+  sendPushNotification,
+  clearClientFCMToken
 };

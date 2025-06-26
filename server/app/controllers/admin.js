@@ -126,10 +126,28 @@ const updateAdminFCMToken = async (req, res) => {
   }
 };
 
+const clearAdminFCMToken = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedAdmin = await Admin.findByIdAndUpdate(id, { tokenFCM: null }, { new: true });
+
+    if (!updatedAdmin) {
+      return res.status(404).json({ error: 'Administrador no encontrado' });
+    }
+
+    res.json({ message: 'Token FCM del administrador eliminado correctamente', data: updatedAdmin });
+  } catch (e) {
+    console.error("Error en clearAdminFCMToken:", e);
+    httpError(res, e);
+  }
+};
+
 module.exports = {
   createAdmin,
   getAdminById,
   getAllAdmins,
   sendPushNotificationToAdmin,
-  updateAdminFCMToken
+  updateAdminFCMToken,
+  clearAdminFCMToken
 };
