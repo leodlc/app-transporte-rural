@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/cliente_controller.dart';
 import '../../models/cliente_model.dart';
 import 'main_login.dart';
+import 'login_styles.dart'; // ← Importamos estilos
 
 class RegistroClienteLogin extends StatefulWidget {
   const RegistroClienteLogin({super.key});
@@ -61,7 +62,7 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
             children: [
               TextFormField(
                 controller: _nombreController,
-                decoration: const InputDecoration(labelText: "Nombre"),
+                decoration: LoginStyles.nombreInput,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo obligatorio";
                   if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
@@ -70,9 +71,10 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   return null;
                 },
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _usernameController,
-                decoration: const InputDecoration(labelText: "Username"),
+                decoration: LoginStyles.usernameInputAlt,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo obligatorio";
                   if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
@@ -81,9 +83,10 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   return null;
                 },
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email"),
+                decoration: LoginStyles.emailInput,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo obligatorio";
@@ -93,9 +96,10 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   return null;
                 },
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _telefonoController,
-                decoration: const InputDecoration(labelText: "Teléfono"),
+                decoration: LoginStyles.telefonoInput,
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Campo obligatorio";
@@ -105,9 +109,10 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   return null;
                 },
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Contraseña"),
+                decoration: LoginStyles.passwordInputAlt,
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.length < 6) {
@@ -116,9 +121,10 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   return null;
                 },
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _confirmarPasswordController,
-                decoration: const InputDecoration(labelText: "Confirmar Contraseña"),
+                decoration: LoginStyles.confirmarPasswordInput,
                 obscureText: true,
                 validator: (value) {
                   if (value != _passwordController.text) {
@@ -127,10 +133,10 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              LoginStyles.verticalSpacing,
               ElevatedButton(
                 onPressed: _registrarCliente,
-                child: const Text("Registrar"),
+                child: const Text("Registrar", style: LoginStyles.buttonText),
               ),
             ],
           ),

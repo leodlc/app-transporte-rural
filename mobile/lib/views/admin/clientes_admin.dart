@@ -41,7 +41,7 @@ class _ClientesAdminState extends State<ClientesAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Clientes")),
+      appBar: AppBar(title: const Text("Gestión de Clientes"), automaticallyImplyLeading: false,),
       body: FutureBuilder<List<Cliente>>(
         future: _clientesFuture,
         builder: (context, snapshot) {

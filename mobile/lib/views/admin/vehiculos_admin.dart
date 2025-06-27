@@ -49,7 +49,7 @@ class _VehiculosAdminState extends State<VehiculosAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Vehículos")),
+      appBar: AppBar(title: const Text("Gestión de Vehículos"), automaticallyImplyLeading: false),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _vehiculosFuture,
         builder: (context, snapshot) {

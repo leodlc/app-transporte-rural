@@ -99,7 +99,7 @@ class _ConductoresAdminState extends State<ConductoresAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Conductores")),
+      appBar: AppBar(title: const Text("Gestión de Conductores"), automaticallyImplyLeading: false),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _conductoresFuture,
         builder: (context, snapshot) {

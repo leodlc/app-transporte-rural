@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile/controllers/cooperativa_controller.dart';
 import '../../controllers/admin_controller.dart';
 import 'formulario_cooperativa.dart'; // Asegúrate de crear esta pantalla
+import 'admin_styles.dart';
+
 
 class CooperativasAdmin extends StatefulWidget {
   const CooperativasAdmin({super.key});
@@ -67,7 +69,7 @@ class _CooperativasAdminState extends State<CooperativasAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Cooperativas")),
+      appBar: AppBar(title: const Text("Gestión de Cooperativas"), automaticallyImplyLeading: false),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _cooperativasFuture,
         builder: (context, snapshot) {
@@ -79,34 +81,34 @@ class _CooperativasAdminState extends State<CooperativasAdmin> {
 
           final cooperativas = snapshot.data!;
           return ListView.builder(
-            padding: const EdgeInsets.all(10),
+            padding: AdminStyles.listPadding,
             itemCount: cooperativas.length,
             itemBuilder: (context, index) {
               final coop = cooperativas[index];
 
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
+                margin: AdminStyles.cardMargin,
                 elevation: 4,
                 child: ListTile(
-                  title: Text("Cooperativa: ${coop['nombre']}"),
+                  title: Text("Cooperativa: ${coop['nombre']}", style: AdminStyles.cardTitle),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Email: ${coop['email']}"),
-                      Text("Responsable: ${coop['responsable']}"),
-                      Text("Ubicación: ${coop['ubicacion']}"),
-                      Text("Teléfono: ${coop['telefono']}"),
+                      Text("Email: ${coop['email']}", style: AdminStyles.cardSubtitle),
+                      Text("Responsable: ${coop['responsable']}", style: AdminStyles.cardSubtitle),
+                      Text("Ubicación: ${coop['ubicacion']}", style: AdminStyles.cardSubtitle),
+                      Text("Teléfono: ${coop['telefono']}", style: AdminStyles.cardSubtitle),
                     ],
                   ),
                   trailing: Wrap(
                     spacing: 10,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        icon: AdminStyles.editIcon,
                         onPressed: () => _mostrarFormulario(cooperativa: coop),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
+                        icon: AdminStyles.deleteIcon,
                         onPressed: () => _eliminarCooperativa(coop['_id']),
                       ),
                     ],
@@ -119,7 +121,7 @@ class _CooperativasAdminState extends State<CooperativasAdmin> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _mostrarFormulario(),
-        child: const Icon(Icons.add),
+        child: AdminStyles.fabAddIcon,
       ),
     );
   }

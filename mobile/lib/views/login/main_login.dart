@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../controllers/login_controller.dart';
 import 'opcion_registro_login.dart';
-
 import '../../widgets/frase_cultural.dart';
+import 'login_styles.dart'; // ← Importar estilos
 
 class MainLogin extends StatefulWidget {
   const MainLogin({super.key});
@@ -13,7 +13,6 @@ class MainLogin extends StatefulWidget {
 
 class _MainLoginState extends State<MainLogin> {
   final LoginController _loginController = LoginController();
-
 
   @override
   void initState() {
@@ -41,33 +40,18 @@ class _MainLoginState extends State<MainLogin> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
-              'RutaMóvil',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
+            const Text('RutaMóvil', style: LoginStyles.title),
             const SizedBox(height: 5),
-            const Text(
-              'Developed by Group #',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+            const Text('Developed by Group #', style: LoginStyles.subtitle),
             const SizedBox(height: 40),
             TextField(
-              controller: _loginController.usernameController,  // Cambiado aquí
-              decoration: const InputDecoration(
-                labelText: 'Usuario',  // Cambiado a "Usuario"
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),  // Icono más adecuado
-              ),
-              keyboardType: TextInputType.text,  // Cambiado a texto normal
+              controller: _loginController.usernameController,
+              decoration: LoginStyles.usernameInput,
             ),
             const SizedBox(height: 15),
             TextField(
               controller: _loginController.passwordController,
-              decoration: const InputDecoration(
-                labelText: 'Contraseña',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
-              ),
+              decoration: LoginStyles.passwordInput,
               obscureText: true,
             ),
             const SizedBox(height: 10),
@@ -77,11 +61,10 @@ class _MainLoginState extends State<MainLogin> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const OpcionRegistroLogin()),
+                    MaterialPageRoute(builder: (_) => const OpcionRegistroLogin()),
                   );
                 },
-                child: const Text('¿No tienes cuenta? Regístrate'),
+                child: const Text('¿No tienes cuenta? Regístrate', style: LoginStyles.linkText),
               ),
             ),
             const SizedBox(height: 10),

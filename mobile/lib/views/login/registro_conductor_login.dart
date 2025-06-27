@@ -4,6 +4,7 @@ import '../../controllers/cooperativa_controller.dart';
 import '../../models/conductor_model.dart';
 import '../../models/cooperativa_model.dart';
 import 'main_login.dart';
+import 'login_styles.dart'; // ← Importamos estilos
 
 class RegistroConductorLogin extends StatefulWidget {
   const RegistroConductorLogin({super.key});
@@ -114,41 +115,46 @@ class _RegistroConductorLoginState extends State<RegistroConductorLogin> {
             children: [
               TextFormField(
                 controller: _nombreController,
-                decoration: const InputDecoration(labelText: "Nombre"),
+                decoration: LoginStyles.nombreInput,
                 validator: (value) => value!.isEmpty ? "Campo obligatorio" : null,
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _usernameController,
-                decoration: const InputDecoration(labelText: "Username"),
+                decoration: LoginStyles.usernameInputAlt,
                 validator: (value) => value!.isEmpty ? "Campo obligatorio" : null,
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email"),
+                decoration: LoginStyles.emailInput,
                 keyboardType: TextInputType.emailAddress,
                 validator: _validarEmail,
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _telefonoController,
-                decoration: const InputDecoration(labelText: "Teléfono"),
+                decoration: LoginStyles.telefonoInput,
                 keyboardType: TextInputType.phone,
                 validator: _validarTelefono,
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Contraseña"),
+                decoration: LoginStyles.passwordInputAlt,
                 obscureText: true,
                 validator: _validarPassword,
               ),
+              LoginStyles.verticalSpacing,
               TextFormField(
                 controller: _confirmarPasswordController,
-                decoration: const InputDecoration(labelText: "Confirmar Contraseña"),
+                decoration: LoginStyles.confirmarPasswordInput,
                 obscureText: true,
                 validator: _confirmarPassword,
               ),
-              const SizedBox(height: 20),
+              LoginStyles.verticalSpacing,
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Cooperativa"),
+                decoration: LoginStyles.cooperativaInput,
                 value: _cooperativaSeleccionada,
                 items: _cooperativas.map((cooperativa) {
                   return DropdownMenuItem<String>(
@@ -164,10 +170,10 @@ class _RegistroConductorLoginState extends State<RegistroConductorLogin> {
                 validator: (value) =>
                     value == null ? "Selecciona una cooperativa" : null,
               ),
-              const SizedBox(height: 20),
+              LoginStyles.verticalSpacing,
               ElevatedButton(
                 onPressed: _registrarConductor,
-                child: const Text("Registrar"),
+                child: const Text("Registrar", style: LoginStyles.buttonText),
               ),
             ],
           ),

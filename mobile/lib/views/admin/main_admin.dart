@@ -8,6 +8,8 @@ import 'conductores_admin.dart';
 import 'clientes_admin.dart';
 import 'vehiculos_admin.dart';
 import 'cooperativas_admin.dart';
+import 'admin_styles.dart';
+
 
 class MainAdmin extends StatefulWidget {
   const MainAdmin({super.key});
@@ -100,7 +102,7 @@ class _MainAdminState extends State<MainAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Administrador")),
+      appBar: AppBar(title: const Text(AdminStyles.appTitle)),
       drawer: Drawer(
         child: ListView(
           children: [
@@ -110,20 +112,14 @@ class _MainAdminState extends State<MainAdmin> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(email),
-                  Text(
-                    "Rol: $rol",
-                    style: const TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
+                  Text("Rol: $rol", style: AdminStyles.rolText),
                 ],
               ),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.red),
-              ),
-              decoration: const BoxDecoration(color: Colors.red),
+              currentAccountPicture: AdminStyles.drawerAvatar,
+              decoration: const BoxDecoration(color: AdminStyles.drawerHeaderColor),
             ),
             ListTile(
-              leading: const Icon(Icons.group),
+              leading: AdminStyles.conductoresIcon,
               title: const Text("Conductores"),
               onTap: () {
                 _onItemTapped(0);
@@ -131,7 +127,7 @@ class _MainAdminState extends State<MainAdmin> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person),
+              leading: AdminStyles.clientesIcon,
               title: const Text("Clientes"),
               onTap: () {
                 _onItemTapped(1);
@@ -139,7 +135,7 @@ class _MainAdminState extends State<MainAdmin> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.directions_car),
+              leading: AdminStyles.vehiculosIcon,
               title: const Text("Vehículos"),
               onTap: () {
                 _onItemTapped(2);
@@ -147,7 +143,7 @@ class _MainAdminState extends State<MainAdmin> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.account_balance),
+              leading: AdminStyles.cooperativasIcon,
               title: const Text("Cooperativas"),
               onTap: () {
                 _onItemTapped(3);
@@ -156,20 +152,21 @@ class _MainAdminState extends State<MainAdmin> {
             ),
             const Divider(),
             const AboutListTile(
-              icon: Icon(Icons.info),
-              applicationName: "LogisticOne",
-              applicationVersion: "1.0.0",
-              applicationLegalese: "© 2025 LogisticOne",
+              icon: AdminStyles.aboutIcon,
+              applicationName: AdminStyles.appName,
+              applicationVersion: AdminStyles.appVersion,
+              applicationLegalese: AdminStyles.appLegalese,
               child: Text("Acerca de"),
             ),
             ListTile(
-              leading: const Icon(Icons.exit_to_app),
+              leading: AdminStyles.logoutIcon,
               title: const Text("Cerrar sesión"),
               onTap: () => _loginController.logout(context),
             ),
           ],
         ),
       ),
+
       body: PageView(
         controller: _pageController,
         children: _screens,

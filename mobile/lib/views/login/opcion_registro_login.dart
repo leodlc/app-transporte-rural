@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'registro_cliente_login.dart';
 import 'registro_conductor_login.dart';
+import 'login_styles.dart'; // ← Importar los estilos
 
 class OpcionRegistroLogin extends StatelessWidget {
   const OpcionRegistroLogin({super.key});
@@ -16,7 +17,7 @@ class OpcionRegistroLogin extends StatelessWidget {
           children: [
             const Text(
               "Regístrate como:",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: LoginStyles.sectionTitle, // ← Estilo de título
             ),
             const SizedBox(height: 30),
             Row(
@@ -25,8 +26,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.person,
-                          size: 80, color: Colors.blue),
+                      icon: LoginStyles.clienteIcon, // ← Icono cliente
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -35,14 +35,13 @@ class OpcionRegistroLogin extends StatelessWidget {
                         );
                       },
                     ),
-                    const Text("Cliente", style: TextStyle(fontSize: 18)),
+                    const Text("Cliente", style: LoginStyles.cardText),
                   ],
                 ),
                 Column(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.directions_car,
-                          size: 80, color: Colors.green),
+                      icon: LoginStyles.conductorIcon, // ← Icono conductor
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -51,7 +50,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                         );
                       },
                     ),
-                    const Text("Conductor", style: TextStyle(fontSize: 18)),
+                    const Text("Conductor", style: LoginStyles.cardText),
                   ],
                 ),
               ],
