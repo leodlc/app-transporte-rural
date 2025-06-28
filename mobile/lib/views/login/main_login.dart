@@ -40,8 +40,11 @@ class _MainLoginState extends State<MainLogin> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text('RutaMóvil', style: LoginStyles.title),
-            const SizedBox(height: 5),
+            Image.asset(
+              'assets/logo.png',
+              height: 320, // ajusta según tu necesidad
+            ),
+            const SizedBox(height: 20),
             const Text('Developed by Group #', style: LoginStyles.subtitle),
             const SizedBox(height: 40),
             TextField(
