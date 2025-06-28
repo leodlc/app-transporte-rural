@@ -1,6 +1,8 @@
+// vehiculos_admin.dart
 import 'package:flutter/material.dart';
 import '../../controllers/admin_controller.dart';
 import 'agregar_vehiculo.dart';
+import 'admin_styles.dart'; // Asegúrate de que la ruta sea correcta
 
 class VehiculosAdmin extends StatefulWidget {
   const VehiculosAdmin({super.key});
@@ -16,76 +18,103 @@ class _VehiculosAdminState extends State<VehiculosAdmin> {
   @override
   void initState() {
     super.initState();
-    _vehiculosFuture = _adminController.fetchVehiculos();
+    _recargarVehiculos();
+  }
+
+  void _recargarVehiculos() {
+    setState(() {
+      _vehiculosFuture = _adminController.fetchVehiculos();
+    });
   }
 
   Future<void> _eliminarVehiculo(String vehiculoId) async {
-    bool success = await _adminController.eliminarVehiculo(vehiculoId);
-    if (success) {
-      setState(() {
-        _vehiculosFuture = _adminController.fetchVehiculos();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vehículo eliminado")),
-      );
+    final confirmacion = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Confirmar Eliminación'),
+        content: const Text('¿Estás seguro de que deseas eliminar este vehículo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar', style: TextStyle(color: AdminStyles.primaryColor)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmacion == true) {
+      bool success = await _adminController.eliminarVehiculo(vehiculoId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? "Vehículo eliminado" : "Error al eliminar"),
+            backgroundColor: success ? AdminStyles.accentColor : Colors.red,
+          ),
+        );
+        if (success) {
+          _recargarVehiculos();
+        }
+      }
     }
   }
 
   Future<void> _irAgregarVehiculo() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AgregarVehiculo(),
-      ),
+      MaterialPageRoute(builder: (context) => const AgregarVehiculo()),
     );
-
     if (result == true) {
-      setState(() {
-        _vehiculosFuture = _adminController.fetchVehiculos();
-      });
+      _recargarVehiculos();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Vehículos"), automaticallyImplyLeading: false),
+      backgroundColor: AdminStyles.backgroundColor,
+      appBar: AppBar(
+        title: const Text("Gestión de Vehículos", style: TextStyle(color: AdminStyles.secondaryColor)),
+        backgroundColor: AdminStyles.primaryColor,
+        automaticallyImplyLeading: false,
+      ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _vehiculosFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError ||
-              !snapshot.hasData ||
-              snapshot.data!.isEmpty) {
-            return const Center(child: Text("No hay vehículos disponibles"));
+            return const Center(child: CircularProgressIndicator(color: AdminStyles.primaryColor));
+          }
+          if (snapshot.hasError) {
+            return const _EmptyState(
+              icon: Icons.error_outline,
+              title: "Error al Cargar",
+              message: "No se pudieron obtener los datos.",
+              color: Colors.red,
+            );
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const _EmptyState(
+              icon: Icons.no_transfer_outlined,
+              title: "No hay vehículos",
+              message: "Presiona '+' para agregar el primero.",
+            );
           }
 
           final vehiculos = snapshot.data!;
           return ListView.builder(
-            padding: const EdgeInsets.all(10),
+            padding: AdminStyles.listPadding,
             itemCount: vehiculos.length,
             itemBuilder: (context, index) {
               final vehiculo = vehiculos[index];
-
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                elevation: 4,
-                child: ListTile(
-                  title: Text("Placa: ${vehiculo['placa']}"),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Marca: ${vehiculo['marca']}"),
-                      Text("Modelo: ${vehiculo['modelo']}"),
-                      Text("RMT: ${vehiculo['rmt']}"),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _eliminarVehiculo(vehiculo['_id']),
-                  ),
-                ),
+              return _VehiculoCard(
+                vehiculo: vehiculo,
+                onDelete: () => _eliminarVehiculo(vehiculo['_id']),
               );
             },
           );
@@ -93,7 +122,99 @@ class _VehiculosAdminState extends State<VehiculosAdmin> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _irAgregarVehiculo,
-        child: const Icon(Icons.add),
+        backgroundColor: AdminStyles.accentColor,
+        child: AdminStyles.fabAddIcon,
+        tooltip: 'Agregar Vehículo',
+      ),
+    );
+  }
+}
+
+class _VehiculoCard extends StatelessWidget {
+  final Map<String, dynamic> vehiculo;
+  final VoidCallback onDelete;
+
+  const _VehiculoCard({required this.vehiculo, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: AdminStyles.cardMargin,
+      decoration: AdminStyles.cardBoxDecoration,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Placa: ${vehiculo['placa'] ?? 'N/A'}", style: AdminStyles.cardTitle),
+            const Divider(height: 16),
+            _InfoRow(icon: Icons.label_outline, text: "Marca: ${vehiculo['marca'] ?? 'N/A'}"),
+            const SizedBox(height: 8),
+            _InfoRow(icon: AdminStyles.vehiculosIcon.icon!, text: "Modelo: ${vehiculo['modelo'] ?? 'N/A'}"),
+            const SizedBox(height: 8),
+            _InfoRow(icon: Icons.confirmation_number_outlined, text: "RMT: ${vehiculo['rmt'] ?? 'N/A'}"),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: AdminStyles.deleteIcon,
+                onPressed: onDelete,
+                tooltip: 'Eliminar Vehículo',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: AdminStyles.cardSubtitle)),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title;
+  final String message;
+  final IconData icon;
+  final Color color;
+
+  const _EmptyState({
+    required this.title,
+    required this.message,
+    required this.icon,
+    this.color = Colors.grey,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 80, color: color),
+            const SizedBox(height: 20),
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(message, style: const TextStyle(fontSize: 14), textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }

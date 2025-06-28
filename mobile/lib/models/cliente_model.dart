@@ -51,7 +51,7 @@ class Cliente {
       password: json["password"],
       firmaDigital: json["firmaDigital"],
       activo: json["activo"] ?? true,
-      tokenFCM: json["tokenFCM"],
+      tokenFCM: json["tokenFCM"] is String ? json["tokenFCM"] : null,
       rol: json["rol"],
     );
   }

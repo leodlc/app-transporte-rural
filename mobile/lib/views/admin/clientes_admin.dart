@@ -1,6 +1,8 @@
+// clientes_admin.dart
 import 'package:flutter/material.dart';
 import '../../controllers/cliente_controller.dart';
 import '../../models/cliente_model.dart';
+import 'admin_styles.dart'; // Asegúrate de que la ruta sea correcta
 
 class ClientesAdmin extends StatefulWidget {
   const ClientesAdmin({super.key});
@@ -16,78 +18,190 @@ class _ClientesAdminState extends State<ClientesAdmin> {
   @override
   void initState() {
     super.initState();
-    _clientesFuture = _clienteController.fetchAllClientes();
+    _recargarClientes();
+  }
+
+  void _recargarClientes() {
+    setState(() {
+      _clientesFuture = _clienteController.fetchAllClientes();
+    });
   }
 
   Future<void> _toggleEstadoCliente(String clienteId, bool estadoActual) async {
-    final actualizado = await _clienteController.updateCliente(clienteId, {
-      'activo': !estadoActual,
-    });
+    final actualizado = await _clienteController.updateCliente(clienteId, {'activo': !estadoActual});
 
-    if (actualizado) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(estadoActual ? "Cliente bloqueado" : "Cliente desbloqueado")),
+        SnackBar(
+          content: Text(actualizado
+              ? (estadoActual ? "Cliente bloqueado" : "Cliente desbloqueado")
+              : "Error al actualizar estado"),
+          backgroundColor: actualizado ? AdminStyles.accentColor : Colors.red,
+        ),
       );
-      setState(() {
-        _clientesFuture = _clienteController.fetchAllClientes();
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error al actualizar estado del cliente")),
-      );
+      if (actualizado) {
+        _recargarClientes();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Clientes"), automaticallyImplyLeading: false,),
+      backgroundColor: AdminStyles.backgroundColor,
+      appBar: AppBar(
+        title: const Text("Gestión de Clientes", style: TextStyle(color: AdminStyles.secondaryColor)),
+        backgroundColor: AdminStyles.primaryColor,
+        automaticallyImplyLeading: false,
+      ),
       body: FutureBuilder<List<Cliente>>(
         future: _clientesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No hay clientes disponibles"));
+            return const Center(child: CircularProgressIndicator(color: AdminStyles.primaryColor));
+          }
+          if (snapshot.hasError) {
+            return const _EmptyState(
+              icon: Icons.error_outline,
+              title: "Error al Cargar",
+              message: "No se pudieron obtener los datos.",
+              color: Colors.red,
+            );
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const _EmptyState(
+              icon: Icons.people_outline,
+              title: "No hay clientes",
+              message: "Los clientes se registrarán desde la app de usuario.",
+            );
           }
 
           final clientes = snapshot.data!;
           return ListView.builder(
-            padding: const EdgeInsets.all(10),
+            padding: AdminStyles.listPadding,
             itemCount: clientes.length,
             itemBuilder: (context, index) {
               final cliente = clientes[index];
-
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                elevation: 4,
-                child: ListTile(
-                  title: Text("Cliente: ${cliente.nombre}"),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Nombre de Usuario: ${cliente.username ?? 'N/A'}"),
-                      Text("Email: ${cliente.email ?? 'N/A'}"),
-                      Text("Teléfono: ${cliente.telefono ?? 'N/A'}"),
-                      Text("Estado: ${cliente.activo ? 'Activo' : 'Bloqueado'}",
-                          style: TextStyle(
-                            color: cliente.activo ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          )),
-                    ],
-                  ),
-                  trailing: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: cliente.activo ? Colors.red : Colors.green,
-                    ),
-                    onPressed: () => _toggleEstadoCliente(cliente.id!, cliente.activo),
-                    child: Text(cliente.activo ? "Bloquear" : "Desbloquear"),
-                  ),
-                ),
+              return _ClienteCard(
+                cliente: cliente,
+                onToggleStatus: () => _toggleEstadoCliente(cliente.id!, cliente.activo),
               );
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _ClienteCard extends StatelessWidget {
+  final Cliente cliente;
+  final VoidCallback onToggleStatus;
+
+  const _ClienteCard({required this.cliente, required this.onToggleStatus});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: AdminStyles.cardMargin,
+      decoration: AdminStyles.cardBoxDecoration,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text(cliente.nombre, style: AdminStyles.cardTitle)),
+                _StatusBadge(isActive: cliente.activo),
+              ],
+            ),
+            const Divider(height: 16),
+            _InfoRow(icon: Icons.account_circle_outlined, text: cliente.username),
+            const SizedBox(height: 8),
+            _InfoRow(icon: Icons.email_outlined, text: cliente.email),
+            const SizedBox(height: 8),
+            _InfoRow(icon: Icons.phone_outlined, text: cliente.telefono ?? 'Sin teléfono'),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onToggleStatus,
+                icon: Icon(cliente.activo ? Icons.lock_outline : Icons.lock_open_outlined),
+                label: Text(cliente.activo ? "Bloquear" : "Desbloquear"),
+                style: TextButton.styleFrom(
+                  foregroundColor: cliente.activo ? Colors.red : AdminStyles.accentColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final bool isActive;
+  const _StatusBadge({required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.green : Colors.red,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        isActive ? 'Activo' : 'Bloqueado',
+        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+// Estos widgets se repiten pero es buena práctica mantenerlos por archivo para modularidad.
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InfoRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[600]),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: AdminStyles.cardSubtitle)),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title, message;
+  final IconData icon;
+  final Color color;
+  const _EmptyState({required this.title, required this.message, required this.icon, this.color = Colors.grey});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 80, color: color),
+            const SizedBox(height: 20),
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(message, style: const TextStyle(fontSize: 14), textAlign: TextAlign.center),
+          ],
+        ),
       ),
     );
   }
