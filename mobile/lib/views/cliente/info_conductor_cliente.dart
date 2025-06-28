@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../../config/api_config.dart';
 import '../../controllers/cliente_controller.dart';
 import '../../controllers/notificacion_controller.dart';
+import 'cliente_styles.dart';
 
 class InfoConductorCliente extends StatefulWidget {
   final Map<String, dynamic> conductorData;
@@ -27,6 +28,7 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
   Map<String, dynamic>? _infoConductor;
   bool _cargando = true;
   bool _solicitudEnviada = false;
+  bool _enviandoSolicitud = false;
 
   @override
   void initState() {
@@ -41,7 +43,10 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('El conductor ha desactivado su ubicación.')),
+          SnackBar(
+            content: const Text('El conductor ha desactivado su ubicación.'),
+            backgroundColor: ClienteStyles.warningColor,
+          ),
         );
       }
     }
@@ -61,7 +66,6 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
 
     final data = await _clienteController.fetchConductorDataSinShared(id);
 
-    // Nueva lógica: verificar si ya hay solicitud pendiente
     final response = await http.get(
       Uri.parse('${ApiConfig.baseUrl}/api/1.0/solicitudTransporte/existe-pendiente?clienteId=$clienteId&conductorId=$id'),
     );
@@ -76,7 +80,6 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
     });
   }
 
-
   @override
   void dispose() {
     widget.socket.off('ubicacion-conductor-desactivada', _handleUbicacionDesactivada);
@@ -84,6 +87,10 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
   }
 
   Future<void> _enviarSolicitud() async {
+    setState(() {
+      _enviandoSolicitud = true;
+    });
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final clienteId = prefs.getString('id');
@@ -105,7 +112,6 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
         throw Exception("Error creando solicitud: ${response.body}");
       }
 
-      // Enviar notificación
       await _notificacionController.enviarNotificacion(
         emisorId: clienteId!,
         rolEmisor: 'cliente',
@@ -115,8 +121,6 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
         cuerpo: 'El cliente $nombreCliente ha solicitado un viaje.',
       );
 
-
-      // ✅ Confirmar con backend que ya existe la solicitud pendiente
       final check = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/api/1.0/solicitudTransporte/existe-pendiente?clienteId=$clienteId&conductorId=$conductorId'),
       );
@@ -125,69 +129,352 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
 
       setState(() {
         _solicitudEnviada = existe;
+        _enviandoSolicitud = false;
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Solicitud enviada. Se notificó al conductor.')),
+          SnackBar(
+            content: const Text('Solicitud enviada. Se notificó al conductor.'),
+            backgroundColor: ClienteStyles.successColor,
+          ),
         );
       }
     } catch (e) {
+      setState(() {
+        _enviandoSolicitud = false;
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al enviar solicitud: $e')),
+          SnackBar(
+            content: Text('Error al enviar solicitud: $e'),
+            backgroundColor: ClienteStyles.errorColor,
+          ),
         );
       }
     }
   }
 
-
-
-
+  Widget _buildInfoRow(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: ClienteStyles.spacing8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(ClienteStyles.spacing8),
+            decoration: BoxDecoration(
+              color: ClienteStyles.primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(ClienteStyles.radiusSmall),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: ClienteStyles.primaryGreen,
+            ),
+          ),
+          SizedBox(width: ClienteStyles.spacing16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: ClienteStyles.labelText,
+                ),
+                SizedBox(height: 2),
+                Text(
+                  value,
+                  style: ClienteStyles.bodyText,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Información del Conductor')),
+      backgroundColor: ClienteStyles.backgroundLight,
+      appBar: AppBar(
+        backgroundColor: ClienteStyles.surfaceWhite,
+        elevation: 0,
+        title: Text(
+          'Información del Conductor',
+          style: ClienteStyles.appBarTitle,
+        ),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: ClienteStyles.textPrimary,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: _cargando
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+        child: CircularProgressIndicator(
+          color: ClienteStyles.primaryGreen,
+        ),
+      )
           : _infoConductor == null
-              ? const Center(child: Text("No se pudo cargar la información."))
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Nombre: ${_infoConductor!['nombre']}", style: const TextStyle(fontSize: 18)),
-                      Text("Email: ${_infoConductor!['email']}", style: const TextStyle(fontSize: 16)),
-                      Text("Teléfono: ${_infoConductor!['telefono']}", style: const TextStyle(fontSize: 16)),
-                      if (_infoConductor!['vehiculo'] != null) ...[
-                        Text("Vehículo: ${_infoConductor!['vehiculo']['modelo']}", style: const TextStyle(fontSize: 16)),
-                        Text("Placa: ${_infoConductor!['vehiculo']['placa']}", style: const TextStyle(fontSize: 16)),
-                        Text("RMT: ${_infoConductor!['vehiculo']['rmt']}", style: const TextStyle(fontSize: 16)),
-                      ] else ...[
-                        const Text("Vehículo: Sin asignar", style: TextStyle(fontSize: 16)),
-                      ],
-
-                      const SizedBox(height: 24),
-                      _solicitudEnviada
-                        ? Text(
-                            "Notificación enviada al conductor ${_infoConductor!['nombre']}, esperando su respuesta. Puede tardar hasta 5 minutos.",
-                            style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-                          )
-                        : Center(
-                            child: ElevatedButton.icon(
-                              onPressed: _enviarSolicitud,
-                              icon: const Icon(Icons.directions_car),
-                              label: const Text("Solicitar Transporte"),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                              ),
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 64,
+              color: ClienteStyles.textSecondary,
+            ),
+            SizedBox(height: ClienteStyles.spacing16),
+            Text(
+              "No se pudo cargar la información",
+              style: ClienteStyles.bodyText,
+            ),
+          ],
+        ),
+      )
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(ClienteStyles.spacing16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Tarjeta de información del conductor
+            Container(
+              decoration: ClienteStyles.cardDecoration,
+              child: Column(
+                children: [
+                  // Header con avatar
+                  Container(
+                    padding: const EdgeInsets.all(ClienteStyles.spacing24),
+                    decoration: BoxDecoration(
+                      color: ClienteStyles.primaryGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(ClienteStyles.radiusLarge),
+                        topRight: Radius.circular(ClienteStyles.radiusLarge),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: ClienteStyles.primaryGreen,
+                          child: Text(
+                            _infoConductor!['nombre'][0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w600,
+                              color: ClienteStyles.surfaceWhite,
                             ),
                           ),
+                        ),
+                        SizedBox(height: ClienteStyles.spacing16),
+                        Text(
+                          _infoConductor!['nombre'],
+                          style: ClienteStyles.cardTitle,
+                        ),
+                        SizedBox(height: ClienteStyles.spacing8),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: ClienteStyles.spacing12,
+                            vertical: ClienteStyles.spacing8,
+                          ),
+                          decoration: ClienteStyles.chipDecoration(
+                            color: ClienteStyles.primaryNavy,
+                          ),
+                          child: Text(
+                            'Conductor Verificado',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: ClienteStyles.primaryNavy,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Información de contacto
+                  Padding(
+                    padding: const EdgeInsets.all(ClienteStyles.spacing24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Información de contacto',
+                          style: ClienteStyles.cardTitle.copyWith(
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: ClienteStyles.spacing16),
+                        _buildInfoRow(
+                          'Correo electrónico',
+                          _infoConductor!['email'],
+                          Icons.email_outlined,
+                        ),
+                        _buildInfoRow(
+                          'Teléfono',
+                          _infoConductor!['telefono'],
+                          Icons.phone_outlined,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: ClienteStyles.spacing16),
+
+            // Tarjeta de información del vehículo
+            Container(
+              decoration: ClienteStyles.cardDecoration,
+              padding: const EdgeInsets.all(ClienteStyles.spacing24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.directions_car_rounded,
+                        color: ClienteStyles.primaryGreen,
+                      ),
+                      SizedBox(width: ClienteStyles.spacing8),
+                      Text(
+                        'Información del vehículo',
+                        style: ClienteStyles.cardTitle.copyWith(
+                          fontSize: 16,
+                        ),
+                      ),
                     ],
                   ),
+                  SizedBox(height: ClienteStyles.spacing16),
+                  if (_infoConductor!['vehiculo'] != null) ...[
+                    _buildInfoRow(
+                      'Modelo',
+                      _infoConductor!['vehiculo']['modelo'],
+                      Icons.directions_car_outlined,
+                    ),
+                    _buildInfoRow(
+                      'Placa',
+                      _infoConductor!['vehiculo']['placa'],
+                      Icons.pin_outlined,
+                    ),
+                    _buildInfoRow(
+                      'RMT',
+                      _infoConductor!['vehiculo']['rmt'],
+                      Icons.verified_outlined,
+                    ),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(ClienteStyles.spacing16),
+                      decoration: BoxDecoration(
+                        color: ClienteStyles.warningColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: ClienteStyles.warningColor,
+                            size: 20,
+                          ),
+                          SizedBox(width: ClienteStyles.spacing8),
+                          Text(
+                            'Vehículo sin asignar',
+                            style: TextStyle(
+                              color: ClienteStyles.warningColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            SizedBox(height: ClienteStyles.spacing24),
+
+            // Estado de solicitud o botón
+            if (_solicitudEnviada) ...[
+              Container(
+                padding: const EdgeInsets.all(ClienteStyles.spacing20),
+                decoration: BoxDecoration(
+                  color: ClienteStyles.accentBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                  border: Border.all(
+                    color: ClienteStyles.accentBlue.withOpacity(0.3),
+                  ),
                 ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.schedule_rounded,
+                      color: ClienteStyles.accentBlue,
+                      size: 48,
+                    ),
+                    SizedBox(height: ClienteStyles.spacing16),
+                    Text(
+                      'Solicitud enviada',
+                      style: ClienteStyles.cardTitle.copyWith(
+                        color: ClienteStyles.accentBlue,
+                      ),
+                    ),
+                    SizedBox(height: ClienteStyles.spacing8),
+                    Text(
+                      'Notificación enviada al conductor ${_infoConductor!['nombre']}.\nEsperando respuesta (puede tardar hasta 5 minutos).',
+                      style: ClienteStyles.bodyText.copyWith(
+                        fontSize: 14,
+                        color: ClienteStyles.accentBlue,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: _enviandoSolicitud ? null : _enviarSolicitud,
+                  icon: _enviandoSolicitud
+                      ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        ClienteStyles.surfaceWhite,
+                      ),
+                    ),
+                  )
+                      : Icon(Icons.directions_car_rounded),
+                  label: Text(
+                    _enviandoSolicitud ? 'Enviando...' : 'Solicitar Transporte',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  style: ClienteStyles.primaryButtonStyle.copyWith(
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
+            SizedBox(height: ClienteStyles.spacing32),
+          ],
+        ),
+      ),
     );
   }
 }

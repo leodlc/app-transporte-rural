@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/conductor_controller.dart';
 import '../../config/api_config.dart';
 import '../cliente/info_conductor_cliente.dart';
+import 'cliente_styles.dart'; // Asegúrate de importar tu clase de estilos
 
 class TransporteCliente extends StatefulWidget {
   const TransporteCliente({super.key});
@@ -82,40 +83,88 @@ class _TransporteClienteState extends State<TransporteCliente> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: ClienteStyles.backgroundLight,
       appBar: AppBar(
-        title: const Text('Conductores disponibles'),
+        title: const Text(
+          'Conductores disponibles',
+          style: ClienteStyles.appBarTitle,
+        ),
+        backgroundColor: ClienteStyles.surfaceWhite,
+        elevation: 0,
+        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Recargar',
+            color: ClienteStyles.primaryColor,
             onPressed: _cargarConductores,
           ),
         ],
       ),
       body: _mensajeEstado.isNotEmpty
-          ? Center(child: Text(_mensajeEstado))
-          : ListView.builder(
-              itemCount: _conductores.length,
-              itemBuilder: (context, index) {
-                final c = _conductores[index];
-                return ListTile(
-                  leading: const Icon(Icons.directions_car),
-                  title: Text(c['nombre']),
-                  subtitle: Text('Lat: ${c['lat']?.toStringAsFixed(6)}, Lng: ${c['lng']?.toStringAsFixed(6)}'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => InfoConductorCliente(
-                          conductorData: c,
-                          socket: _socket, // pasamos el socket
+          ? Center(
+        child: Padding(
+          padding: const EdgeInsets.all(ClienteStyles.spacing16),
+          child: Text(
+            _mensajeEstado,
+            style: ClienteStyles.bodyText.copyWith(color: ClienteStyles.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      )
+          : ListView.separated(
+        padding: const EdgeInsets.all(ClienteStyles.spacing16),
+        itemCount: _conductores.length,
+        separatorBuilder: (_, __) => const SizedBox(height: ClienteStyles.spacing12),
+        itemBuilder: (context, index) {
+          final c = _conductores[index];
+          return InkWell(
+            borderRadius: BorderRadius.circular(ClienteStyles.radiusLarge),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => InfoConductorCliente(
+                    conductorData: c,
+                    socket: _socket,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              decoration: ClienteStyles.cardDecoration,
+              padding: const EdgeInsets.all(ClienteStyles.spacing16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.directions_car_rounded,
+                    size: 36,
+                    color: ClienteStyles.primaryColor,
+                  ),
+                  const SizedBox(width: ClienteStyles.spacing16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c['nombre'] ?? 'Conductor',
+                          style: ClienteStyles.cardTitle,
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
+                        const SizedBox(height: 4),
+                        Text(
+                          'Lat: ${c['lat']?.toStringAsFixed(6)}, Lng: ${c['lng']?.toStringAsFixed(6)}',
+                          style: ClienteStyles.cardSubtitle,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: ClienteStyles.textSecondary),
+                ],
+              ),
             ),
+          );
+        },
+      ),
     );
   }
 }

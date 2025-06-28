@@ -11,6 +11,7 @@ import '../../widgets/verificacion.dart';
 import 'inicio_cliente.dart';
 import '../../utils/keep_alive_wrapper.dart';
 import '../../controllers/notificacion_controller.dart';
+import 'cliente_styles.dart';
 
 class MainCliente extends StatefulWidget {
   const MainCliente({super.key});
@@ -34,7 +35,6 @@ class _MainClienteState extends State<MainCliente> {
     _loadUserData();
     _setupNotificationTapHandler();
     _obtenerYGuardarTokenFCM().then((_) => _registrarTokenFCM());
-
   }
 
   Future<void> _registrarTokenFCM() async {
@@ -66,7 +66,6 @@ class _MainClienteState extends State<MainCliente> {
       await prefs.setString('fcm_token', token);
     }
   }
-
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -135,106 +134,286 @@ class _MainClienteState extends State<MainCliente> {
     }
   }
 
+  String _getInitials(String name) {
+    List<String> names = name.trim().split(' ');
+    String initials = '';
+
+    if (names.isNotEmpty) {
+      initials = names[0][0].toUpperCase();
+      if (names.length > 1) {
+        initials += names[names.length - 1][0].toUpperCase();
+      }
+    }
+
+    return initials.isEmpty ? 'U' : initials;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Cliente")),
+      backgroundColor: ClienteStyles.backgroundLight,
+      appBar: AppBar(
+        backgroundColor: ClienteStyles.surfaceWhite,
+        elevation: 0,
+        title: Text(
+          ClienteStyles.appTitle,
+          style: ClienteStyles.appBarTitle,
+        ),
+        iconTheme: IconThemeData(color: ClienteStyles.textPrimary),
+      ),
       drawer: Drawer(
-        child: ListView(
+        backgroundColor: ClienteStyles.surfaceWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(ClienteStyles.radiusLarge),
+            bottomRight: Radius.circular(ClienteStyles.radiusLarge),
+          ),
+        ),
+        child: Column(
           children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(nombre),
-              accountEmail: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Header del drawer
+            Container(
+              width: double.infinity,
+              decoration: ClienteStyles.drawerHeaderDecoration,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(ClienteStyles.spacing20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClienteStyles.drawerAvatar(
+                        initials: _getInitials(nombre),
+                      ),
+                      SizedBox(height: ClienteStyles.spacing16),
+                      Text(
+                        nombre,
+                        style: ClienteStyles.drawerHeaderTitle,
+                      ),
+                      SizedBox(height: ClienteStyles.spacing8),
+                      Text(
+                        email,
+                        style: ClienteStyles.drawerHeaderSubtitle,
+                      ),
+                      SizedBox(height: ClienteStyles.spacing8),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: ClienteStyles.spacing12,
+                          vertical: ClienteStyles.spacing8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ClienteStyles.surfaceWhite.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(ClienteStyles.radiusCircular),
+                        ),
+                        child: Text(
+                          rol,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: ClienteStyles.surfaceWhite,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Items del drawer
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  vertical: ClienteStyles.spacing16,
+                ),
                 children: [
-                  Text(email),
-                  Text(
-                    "Rol: $rol",
-                    style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  _buildDrawerItem(
+                    icon: ClienteStyles.inicioIcon,
+                    title: "Inicio",
+                    isSelected: _selectedIndex == 0,
+                    onTap: () {
+                      _onItemTapped(0);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: ClienteStyles.transporteIcon,
+                    title: "Transporte",
+                    isSelected: _selectedIndex == 1,
+                    onTap: () {
+                      _onItemTapped(1);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: ClienteStyles.perfilIcon,
+                    title: "Perfil",
+                    isSelected: _selectedIndex == 2,
+                    onTap: () {
+                      _onItemTapped(2);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: ClienteStyles.spacing20,
+                      vertical: ClienteStyles.spacing8,
+                    ),
+                    child: Divider(color: ClienteStyles.dividerColor),
+                  ),
+                  _buildDrawerItem(
+                    icon: ClienteStyles.aboutIcon,
+                    title: "Acerca de",
+                    onTap: () {
+                      showAboutDialog(
+                        context: context,
+                        applicationName: ClienteStyles.appName,
+                        applicationVersion: ClienteStyles.appVersion,
+                        applicationLegalese: ClienteStyles.appLegalese,
+                        applicationIcon: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: ClienteStyles.primaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(ClienteStyles.radiusLarge),
+                          ),
+                          child: Icon(
+                            Icons.directions_bus_rounded,
+                            size: 40,
+                            color: ClienteStyles.primaryGreen,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.blue),
+            ),
+
+            // Botón de cerrar sesión
+            Container(
+              padding: const EdgeInsets.all(ClienteStyles.spacing16),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: ClienteStyles.dividerColor),
+                ),
               ),
-              decoration: const BoxDecoration(color: Colors.blue),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text("Inicio"),
-              onTap: () {
-                _onItemTapped(0);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.directions_bus),
-              title: const Text("Transporte"),
-              onTap: () {
-                _onItemTapped(1);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text("Perfil"),
-              onTap: () {
-                _onItemTapped(2);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text("Configuración"),
-              onTap: () {}, // Puedes enlazar una pantalla de configuración aquí
-            ),
-            const Divider(),
-            const AboutListTile(
-              icon: Icon(Icons.info),
-              applicationName: "Transporte rural",
-              applicationVersion: "1.0.0",
-              applicationLegalese: "© 2025 TransporteRural",
-              child: Text("Acerca de"),
-            ),
-            ListTile(
-              leading: const Icon(Icons.exit_to_app),
-              title: const Text("Cerrar sesión"),
-              onTap: () => _loginController.logout(context),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _loginController.logout(context),
+                  icon: ClienteStyles.logoutIcon,
+                  label: const Text("Cerrar sesión"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ClienteStyles.errorColor,
+                    foregroundColor: ClienteStyles.surfaceWhite,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: ClienteStyles.spacing12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
       ),
       body: PageView(
         controller: _pageController,
-        children: const [
-          KeepAliveWrapper(child: InicioCliente()),
-          KeepAliveWrapper(child: TransporteCliente()),
-          KeepAliveWrapper(child: PerfilCliente()),
+        children: [
+          const KeepAliveWrapper(child: InicioCliente()),
+          const KeepAliveWrapper(child: TransporteCliente()),
+          KeepAliveWrapper(
+            child: PerfilCliente(
+              onPerfilActualizado: () async {
+                await _loadUserData();
+                if (mounted) setState(() {}); // 👈 fuerza actualización del drawer
+              },
+            ),
+          ),
         ],
+
         onPageChanged: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Inicio",
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: ClienteStyles.surfaceWhite,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: CustomBottomNavBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_rounded),
+                label: "Inicio",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.directions_bus_rounded),
+                label: "Transporte",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded),
+                label: "Perfil",
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.directions_bus),
-            label: "Transporte",
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required Icon icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: ClienteStyles.spacing12,
+        vertical: ClienteStyles.spacing8 / 2,
+      ),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? ClienteStyles.primaryGreen.withOpacity(0.1)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon.icon,
+          color: isSelected
+              ? ClienteStyles.primaryGreen
+              : ClienteStyles.textSecondary,
+          size: 24,
+        ),
+        title: Text(
+          title,
+          style: ClienteStyles.drawerItemText.copyWith(
+            color: isSelected
+                ? ClienteStyles.primaryGreen
+                : ClienteStyles.textPrimary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Perfil",
-          ),
-        ],
+        ),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+        ),
       ),
     );
   }

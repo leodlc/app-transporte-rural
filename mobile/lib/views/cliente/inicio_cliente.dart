@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import '../../config/api_config.dart'; // Asumo que tienes este archivo con la baseUrl
+import '../../config/api_config.dart';
 import '../../widgets/agregarUbicacionCliente.dart';
+import 'cliente_styles.dart';
 
 class InicioCliente extends StatefulWidget {
   const InicioCliente({super.key});
@@ -34,11 +35,20 @@ class _InicioClienteState extends State<InicioCliente> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: ClienteStyles.backgroundLight,
       appBar: AppBar(
-        title: const Text("Inicio Cliente"),
+        backgroundColor: ClienteStyles.surfaceWhite,
+        elevation: 0,
+        title: Text(
+          "Inicio Cliente",
+          style: ClienteStyles.appBarTitle,
+        ),
       ),
       body: Center(
-        child: AgregarUbicacionCliente(socket: socket),
+        child: Padding(
+          padding: const EdgeInsets.all(ClienteStyles.spacing16),
+          child: AgregarUbicacionCliente(socket: socket),
+        ),
       ),
     );
   }
