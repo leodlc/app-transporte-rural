@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/controllers/conductor_controller.dart';
 import '../../controllers/admin_controller.dart';
-import 'agregar_conductor.dart';
 import 'admin_styles.dart'; // Asegúrate de que la ruta sea correcta
 
 class ConductoresAdmin extends StatefulWidget {
@@ -28,17 +27,6 @@ class _ConductoresAdminState extends State<ConductoresAdmin> {
       _conductoresFuture = _adminController.fetchConductores();
     });
   }
-
-  Future<void> _irAgregarConductor() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AgregarConductor()), // Asegúrate que esta vista exista
-    );
-    if (result == true) {
-      _recargarConductores();
-    }
-  }
-
 
   Future<void> _toggleEstadoConductor(String conductorId, bool estadoActual) async {
     final actualizado = await _conductorController.updateConductor(conductorId, {'activo': !estadoActual});
@@ -126,7 +114,7 @@ class _ConductoresAdminState extends State<ConductoresAdmin> {
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const _EmptyState(
-                icon: Icons.person_search_outlined, title: "No hay conductores", message: "Presiona '+' para agregar el primero.");
+                icon: Icons.person_search_outlined, title: "No hay conductores", message: "Primero se deben registrar conductores.");
           }
 
           final conductores = snapshot.data!;
@@ -143,12 +131,6 @@ class _ConductoresAdminState extends State<ConductoresAdmin> {
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _irAgregarConductor,
-        backgroundColor: AdminStyles.accentColor,
-        child: AdminStyles.fabAddIcon,
-        tooltip: 'Agregar Conductor',
       ),
     );
   }
