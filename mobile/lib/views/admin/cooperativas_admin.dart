@@ -189,16 +189,17 @@ class _CooperativaCard extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
-
-  const _InfoRow({required this.icon, required this.text});
+  final Color? color;
+  const _InfoRow({required this.icon, required this.text, this.color});
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = color ?? Colors.grey[600];
     return Row(
       children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
+        Icon(icon, size: 18, color: iconColor),
         const SizedBox(width: 12),
-        Expanded(child: Text(text, style: AdminStyles.cardSubtitle)),
+        Expanded(child: Text(text, style: AdminStyles.cardSubtitle.copyWith(color: iconColor))),
       ],
     );
   }
