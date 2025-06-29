@@ -32,7 +32,7 @@ leodlc-app-transporte-rural/
 
 ```bash
 git clone https://github.com/usuario/rutamovil.git
-cd leodlc-app-transporte-rural
+cd app-transporte-rural
 ```
 
 ### 2. Backend
