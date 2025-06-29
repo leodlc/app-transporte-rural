@@ -4,9 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import '../../config/api_config.dart'; // Asegúrate de importar correctamente tu baseUrl
+import '../../config/api_config.dart';
 import '../../controllers/login_controller.dart';
-
+import '../../views/login/login_styles.dart';
 
 /// Formateador personalizado para convertir todo a MAYÚSCULAS
 class UpperCaseTextFormatter extends TextInputFormatter {
@@ -17,6 +17,55 @@ class UpperCaseTextFormatter extends TextInputFormatter {
       selection: newValue.selection,
     );
   }
+}
+
+/// 🎨 Duplicación segura de baseInputDecoration
+InputDecoration buildInputCodigo(String label, IconData icon, {String? errorText}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: LoginStyles.inputLabelStyle,
+    prefixIcon: Icon(
+      icon,
+      color: LoginStyles.textSecondary,
+      size: 22,
+    ),
+    filled: true,
+    fillColor: LoginStyles.surfaceWhite,
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: LoginStyles.spacing16,
+      vertical: LoginStyles.spacing16,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(LoginStyles.radiusMedium),
+      borderSide: const BorderSide(
+        color: LoginStyles.dividerColor,
+        width: 1,
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(LoginStyles.radiusMedium),
+      borderSide: const BorderSide(
+        color: LoginStyles.primaryGreen,
+        width: 2,
+      ),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(LoginStyles.radiusMedium),
+      borderSide: const BorderSide(
+        color: LoginStyles.errorColor,
+        width: 1,
+      ),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(LoginStyles.radiusMedium),
+      borderSide: const BorderSide(
+        color: LoginStyles.errorColor,
+        width: 2,
+      ),
+    ),
+    errorText: errorText,
+    counterText: '',
+  );
 }
 
 Future<void> showVerificationDialog(BuildContext context, String email) async {
@@ -30,12 +79,23 @@ Future<void> showVerificationDialog(BuildContext context, String email) async {
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Verificar Código'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(LoginStyles.radiusLarge),
+          ),
+          backgroundColor: LoginStyles.surfaceWhite,
+          title: Text(
+            'Verificar Código',
+            style: LoginStyles.sectionTitle,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Ingresa el código de verificación enviado a tu email.'),
-              const SizedBox(height: 10),
+              Text(
+                'Ingresa el código de verificación enviado a tu email.',
+                style: LoginStyles.subtitle,
+                textAlign: TextAlign.center,
+              ),
+              LoginStyles.verticalSpacingLarge,
               TextField(
                 controller: _codeController,
                 maxLength: 6,
@@ -44,18 +104,22 @@ Future<void> showVerificationDialog(BuildContext context, String email) async {
                   UpperCaseTextFormatter(),
                   LengthLimitingTextInputFormatter(6),
                 ],
-                decoration: InputDecoration(
-                  labelText: 'Código',
+                decoration: buildInputCodigo(
+                  'Código',
+                  Icons.verified,
                   errorText: errorMessage,
-                  counterText: '', // Oculta el contador de caracteres
                 ),
               ),
-              const SizedBox(height: 10),
+              LoginStyles.verticalSpacing,
               if (isVerifying) const CircularProgressIndicator(),
             ],
           ),
+          actionsPadding: const EdgeInsets.symmetric(
+            horizontal: LoginStyles.spacing16,
+            vertical: LoginStyles.spacing8,
+          ),
           actions: [
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: isVerifying
                   ? null
                   : () async {
@@ -74,7 +138,9 @@ Future<void> showVerificationDialog(BuildContext context, String email) async {
                         Navigator.of(context).pop();
                       }
                     },
-              child: const Text('Verificar'),
+              icon: const Icon(Icons.verified),
+              label: const Text('Verificar'),
+              style: LoginStyles.primaryButtonStyle,
             ),
             TextButton(
               onPressed: () {
@@ -82,9 +148,9 @@ Future<void> showVerificationDialog(BuildContext context, String email) async {
                 loginController.logout(context);
               },
               child: const Text('Cerrar sesión'),
+              style: LoginStyles.textButtonStyle,
             ),
           ],
-
         ),
       );
     },
