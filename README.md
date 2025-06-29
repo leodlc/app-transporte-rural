@@ -21,7 +21,7 @@ leodlc-app-transporte-rural/
 ├── documentacion/           # Diagramas de actividades y modelo entidad-relación
 ├── mobile/                  # Aplicación Flutter
 ├── server/                  # Servidor Node.js (API REST y sockets)
-└── .env                     # Variables de entorno (en la carpeta server/)
+    └── .env                     # Variables de entorno (en la carpeta server/)
 ```
 
 ---
