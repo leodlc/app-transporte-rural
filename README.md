@@ -59,7 +59,7 @@ FIREBASE_CLIENT_EMAIL=your_client_email
 #### Ejecución
 
 ```bash
-node app.js
+npm run dev
 ```
 
 ### 3. Frontend
