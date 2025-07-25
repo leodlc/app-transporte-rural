@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../widgets/agregarUbicacion.dart';
 import '../../config/api_config.dart';  // <-- Importa tu config aquí
+import '../cliente/cliente_styles.dart';
 
 class InicioConductor extends StatefulWidget {
   const InicioConductor({super.key});
@@ -37,6 +38,22 @@ class _InicioConductorState extends State<InicioConductor> {
 
   @override
   Widget build(BuildContext context) {
-    return AgregarUbicacion(socket: socket);
+    return Scaffold(
+      backgroundColor: ClienteStyles.backgroundLight,
+      appBar: AppBar(
+        backgroundColor: ClienteStyles.surfaceWhite,
+        elevation: 0,
+        title: Text(
+          "Inicio Conductor",
+          style: ClienteStyles.appBarTitle,
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(ClienteStyles.spacing16),
+          child: AgregarUbicacion(socket: socket),
+        ),
+      ),
+    );
   }
 }

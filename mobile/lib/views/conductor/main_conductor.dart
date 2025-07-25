@@ -11,6 +11,7 @@ import '../../controllers/notificacion_controller.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/bloc/notifications_bloc.dart';
+import 'conductor_styles.dart';
 
 class MainConductor extends StatefulWidget {
   const MainConductor({super.key});
@@ -95,96 +96,239 @@ class _MainConductorState extends State<MainConductor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Conductor")),
-      drawer: Drawer(
-        child: ListView(
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(nombre),
-              accountEmail: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(email),
-                  Text(
-                    "Rol: $rol",
-                    style: const TextStyle(fontSize: 14, color: Colors.white70),
-                  ),
-                ],
-              ),
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, size: 40, color: Colors.blue),
-              ),
-              decoration: const BoxDecoration(color: Colors.blue),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text("Inicio"),
-              onTap: () {
-                _onItemTapped(0);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.assignment),
-              title: const Text("Solicitudes"),
-              onTap: () {
-                _onItemTapped(1);  // índice correcto para Solicitudes
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text("Configuración"),
-              onTap: () {},
-            ),
-            const Divider(),
-            const AboutListTile(
-              icon: Icon(Icons.info),
-              applicationName: "Transporte rural",
-              applicationVersion: "1.0.0",
-              applicationLegalese: "© 2025 TransporteRural",
-              child: Text("Acerca de"),
-            ),
-            ListTile(
-              leading: const Icon(Icons.exit_to_app),
-              title: const Text("Cerrar sesión"),
-              onTap: () => _loginController.logout(context),
-            ),
-          ],
+    return Theme(
+      data: ConductorStyles.conductorTheme,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            ConductorStyles.appTitle,
+            style: ConductorStyles.appBarTitle,
+          ),
+          backgroundColor: ConductorStyles.surfaceWhite,
+          foregroundColor: ConductorStyles.textPrimary,
+          elevation: 0,
+          iconTheme: IconThemeData(color: ConductorStyles.textPrimary),
         ),
-      ),
-      body: PageView(
-        controller: _pageController,
-        children: const [
-          KeepAliveWrapper(child: InicioConductor()),
-          KeepAliveWrapper(child: SolicitudesConductor()),
-          KeepAliveWrapper(child: PerfilConductor()),
-        ],
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-      ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Inicio",
+        drawer: Drawer(
+          backgroundColor: ConductorStyles.surfaceWhite,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Container(
+                height: 180, // altura fija
+                decoration: ConductorStyles.drawerHeaderDecoration,
+                child: Padding(
+                  padding: const EdgeInsets.all(ConductorStyles.spacing16),
+                  child: SingleChildScrollView( // <-- envuelve aquí
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      // mainAxisAlignment: MainAxisAlignment.center, // <--- elimina esta línea
+                      children: [
+                        ConductorStyles.drawerAvatar(
+                          initials: nombre.isNotEmpty ? nombre[0] : 'C',
+                        ),
+                        const SizedBox(height: ConductorStyles.spacing12),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 250),
+                          child: Text(
+                            nombre,
+                            style: ConductorStyles.drawerHeaderTitle,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            softWrap: false,
+                          ),
+                        ),
+                        const SizedBox(height: ConductorStyles.spacing8),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 250),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                email,
+                                style: ConductorStyles.drawerHeaderSubtitle,
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                softWrap: false,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Rol: $rol",
+                                style: ConductorStyles.drawerHeaderSubtitle.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                softWrap: false,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: ConductorStyles.spacing12,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: ConductorStyles.spacing8),
+                    ListTile(
+                      leading: ConductorStyles.inicioIcon,
+                      title: Text(
+                        "Inicio",
+                        style: ConductorStyles.drawerItemText,
+                      ),
+                      selected: _selectedIndex == 0,
+                      selectedColor: ConductorStyles.selectedItemColor,
+                      selectedTileColor: ConductorStyles.selectedItemColor.withOpacity(0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: ConductorStyles.spacing16,
+                        vertical: ConductorStyles.spacing4, // Reducido de spacing8
+                      ),
+                      onTap: () {
+                        _onItemTapped(0);
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const SizedBox(height: ConductorStyles.spacing4), // Reducido de spacing8
+                    ListTile(
+                      leading: const Icon(Icons.assignment_rounded, size: 24),
+                      title: Text(
+                        "Solicitudes",
+                        style: ConductorStyles.drawerItemText,
+                      ),
+                      selected: _selectedIndex == 1,
+                      selectedColor: ConductorStyles.selectedItemColor,
+                      selectedTileColor: ConductorStyles.selectedItemColor.withOpacity(0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: ConductorStyles.spacing16,
+                        vertical: ConductorStyles.spacing4, // Reducido de spacing8
+                      ),
+                      onTap: () {
+                        _onItemTapped(1);
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const SizedBox(height: ConductorStyles.spacing4), // Reducido de spacing8
+                    ListTile(
+                      leading: ConductorStyles.configuracionIcon,
+                      title: Text(
+                        "Configuración",
+                        style: ConductorStyles.drawerItemText,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: ConductorStyles.spacing16,
+                        vertical: ConductorStyles.spacing4, // Reducido de spacing8
+                      ),
+                      onTap: () {},
+                    ),
+                    const SizedBox(height: ConductorStyles.spacing12), // Reducido de spacing16
+                    Divider(
+                      color: ConductorStyles.dividerColor,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: ConductorStyles.spacing4), // Reducido de spacing8
+                    ListTile(
+                      leading: ConductorStyles.aboutIcon,
+                      title: Text(
+                        "Acerca de",
+                        style: ConductorStyles.drawerItemText,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: ConductorStyles.spacing16,
+                        vertical: ConductorStyles.spacing4, // Reducido de spacing8
+                      ),
+                      onTap: () {
+                        showAboutDialog(
+                          context: context,
+                          applicationName: ConductorStyles.appName,
+                          applicationVersion: ConductorStyles.appVersion,
+                          applicationLegalese: ConductorStyles.appLegalese,
+                          applicationIcon: Icon(
+                            Icons.drive_eta_rounded,
+                            size: 48,
+                            color: ConductorStyles.primaryColor,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: ConductorStyles.spacing4), // Reducido de spacing8
+                    ListTile(
+                      leading: ConductorStyles.logoutIcon,
+                      title: Text(
+                        "Cerrar sesión",
+                        style: ConductorStyles.drawerItemText,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: ConductorStyles.spacing16,
+                        vertical: ConductorStyles.spacing4, // Reducido de spacing8
+                      ),
+                      onTap: () => _loginController.logout(context),
+                    ),
+                    const SizedBox(height: ConductorStyles.spacing8), // Padding final
+                  ],
+                ),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: "Solicitudes",
+        ),
+        body: PageView(
+          controller: _pageController,
+          children: const [
+            KeepAliveWrapper(child: InicioConductor()),
+            KeepAliveWrapper(child: SolicitudesConductor()),
+            KeepAliveWrapper(child: PerfilConductor()),
+          ],
+          onPageChanged: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+        ),
+        bottomNavigationBar: Theme(
+          data: Theme.of(context).copyWith(
+            bottomNavigationBarTheme: ConductorStyles.conductorTheme.bottomNavigationBarTheme,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Perfil",
+          child: CustomBottomNavBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard_rounded),
+                label: "Inicio",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.assignment_rounded),
+                label: "Solicitudes",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_rounded),
+                label: "Perfil",
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
