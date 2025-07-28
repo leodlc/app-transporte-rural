@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import '../../controllers/cliente_controller.dart';
 import '../../controllers/login_controller.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import 'perfil_cliente.dart';

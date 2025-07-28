@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
-import '../../controllers/solicitud_controller.dart';
+import 'package:mobile/views/conductor/conductor_styles.dart';
+import 'package:mobile/ws/SocketManager.dart';
 import '../../controllers/notificacion_controller.dart';
 
 class InfoSolicitud extends StatefulWidget {
   final Map<String, dynamic> solicitud;
-  final VoidCallback onUpdate;
 
-  const InfoSolicitud({super.key, required this.solicitud, required this.onUpdate});
+  const InfoSolicitud({super.key, required this.solicitud});
 
   @override
   State<InfoSolicitud> createState() => _InfoSolicitudState();
 }
 
 class _InfoSolicitudState extends State<InfoSolicitud> {
-  final SolicitudController _solicitudController = SolicitudController();
+  final SocketManager _socketManager = SocketManager.instance;
   final NotificacionController _notificacionController = NotificacionController();
+  String? _conductorId;
 
   @override
   void initState() {
     super.initState();
     _imprimirDatosDebug();
+    _conductorId = widget.solicitud['conductorId'];
   }
 
   void _imprimirDatosDebug() {
@@ -38,42 +40,53 @@ class _InfoSolicitudState extends State<InfoSolicitud> {
   }
 
   void _cambiarEstado(BuildContext context, String nuevoEstado) async {
-    try {
-      await _solicitudController.actualizarEstadoSolicitud(
-        solicitudId: widget.solicitud['_id'],
-        nuevoEstado: nuevoEstado,
-      );
+    final cliente = widget.solicitud['clienteId'];
 
-      final cliente = widget.solicitud['clienteId'];
-      final tokenFCMList = cliente['tokenFCM'] as List<dynamic>?;
+    void _onSolicitudError(error) {
+      _socketManager.off('solicitud:error', _onSolicitudError);
 
-      if (tokenFCMList == null || tokenFCMList.isEmpty) {
-        throw Exception('El cliente no tiene tokens FCM registrados');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al $nuevoEstado solicitud: $error'),
+            backgroundColor: ConductorStyles.errorColor,
+          ),
+        );
       }
+    }
 
-      final ultimoToken = tokenFCMList.last;
+    void _onSolicitudActualizar(data) {
+      _socketManager.off('solicitud:estadoActualizado', _onSolicitudActualizar);
+      _socketManager.off('solicitud:error', _onSolicitudError);
 
-      await _notificacionController.enviarNotificacion(
+
+      // Notificación push (opcional)
+      _notificacionController.enviarNotificacion(
         emisorId: widget.solicitud['conductorId'],
         rolEmisor: 'conductor',
         usuarioId: cliente['_id'],
         rol: 'cliente',
         titulo: 'Solicitud $nuevoEstado',
         cuerpo: 'Tu solicitud fue $nuevoEstado por el conductor.',
-        // tokenFCM: ultimoToken, // si el backend lo usara directamente
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Solicitud $nuevoEstado exitosamente')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Solicitud $nuevoEstado exitosamente')),
+        );
+      }
 
-      widget.onUpdate();
+      _socketManager.emit('solicitud:obtener', {'conductorId': _conductorId});
+
       Navigator.pop(context);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
     }
+
+    _socketManager.on('solicitud:estadoActualizado', _onSolicitudActualizar);
+    _socketManager.on('solicitud:error', _onSolicitudError);
+
+    _socketManager.emit('solicitud:actualizar', {'solicitudId': widget.solicitud['_id'],
+        'estado': nuevoEstado});
+
   }
 
   @override

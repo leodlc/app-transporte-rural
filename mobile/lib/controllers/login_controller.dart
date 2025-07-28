@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile/controllers/admin_controller.dart';
 import 'package:mobile/views/admin/main_admin.dart';
+import 'package:mobile/ws/SocketManager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../views/cliente/main_cliente.dart';
 import '../views/conductor/main_conductor.dart';
@@ -125,7 +126,7 @@ class LoginController {
       }
     }
 
-    // Limpiar almacenamiento local
+    await SocketManager.instance.disconnect();
     await prefs.clear();
 
     Navigator.pushReplacement(

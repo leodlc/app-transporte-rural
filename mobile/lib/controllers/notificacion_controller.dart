@@ -27,6 +27,10 @@ class NotificacionController {
       }),
     );
 
+    if (response.statusCode == 200) {
+      print('Notificación enviada exitosamente');
+    }
+
     if (response.statusCode != 200) {
       throw Exception('Error al enviar notificación: ${response.body}');
     }

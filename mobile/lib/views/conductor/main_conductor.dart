@@ -9,8 +9,6 @@ import 'inicio_conductor.dart';
 import '../../utils/keep_alive_wrapper.dart';
 import '../../controllers/notificacion_controller.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../services/bloc/notifications_bloc.dart';
 import 'conductor_styles.dart';
 
 class MainConductor extends StatefulWidget {
@@ -19,6 +17,7 @@ class MainConductor extends StatefulWidget {
   @override
   _MainConductorState createState() => _MainConductorState();
 }
+
 
 class _MainConductorState extends State<MainConductor> {
   String nombre = "Cargando...";

@@ -1,9 +1,9 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/conductor_model.dart';
 import '../config/api_config.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ConductorController {
   Future<void> fetchConductorData(String id) async {
@@ -84,8 +84,10 @@ class ConductorController {
     try {
       final response = await http.get(url);
 
+      log(url.toString());
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)['data'];
+        final data = jsonDecode(response.body);
         return List<Map<String, dynamic>>.from(data);
       } else {
         print("Error al obtener conductores activos: ${response.body}");

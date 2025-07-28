@@ -91,46 +91,62 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
       _enviandoSolicitud = true;
     });
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final clienteId = prefs.getString('id');
-      final nombreCliente = prefs.getString('nombre') ?? 'Cliente Desconocido';
-      final conductorId = widget.conductorData['conductorId'];
+    final prefs = await SharedPreferences.getInstance();
+    final clienteId = prefs.getString('id');
+    final nombreCliente = prefs.getString('nombre') ?? 'Cliente Desconocido';
+    final conductorId = widget.conductorData['conductorId'];
 
-      if (clienteId == null) throw Exception("Cliente no logueado");
-
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/1.0/solicitudTransporte/crear'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'clienteId': clienteId,
-          'conductorId': conductorId,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception("Error creando solicitud: ${response.body}");
+    if (clienteId == null) {
+      setState(() {
+        _enviandoSolicitud = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No se ha iniciado sesión.'),
+            backgroundColor: ClienteStyles.errorColor,
+          ),
+        );
       }
+      return;
+    }
 
-      await _notificacionController.enviarNotificacion(
-        emisorId: clienteId!,
+    void _onSolicitudError(error) {
+      widget.socket.off('solicitud:error', _onSolicitudError);
+
+      setState(() {
+        _enviandoSolicitud = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al enviar solicitud: $error'),
+            backgroundColor: ClienteStyles.errorColor,
+          ),
+        );
+      }
+    }
+
+    // Escuchar respuesta del servidor (una sola vez)
+    void _onSolicitudCreada(data) {
+      widget.socket.off('solicitud:creada', _onSolicitudCreada);
+      widget.socket.off('solicitud:error', _onSolicitudError);
+
+      setState(() {
+        _solicitudEnviada = true;
+        _enviandoSolicitud = false;
+      });
+
+      // Notificación push (opcional)
+      _notificacionController.enviarNotificacion(
+        emisorId: clienteId,
         rolEmisor: 'cliente',
         usuarioId: conductorId,
         rol: 'conductor',
         titulo: 'Nueva solicitud de transporte',
         cuerpo: 'El cliente $nombreCliente ha solicitado un viaje.',
       );
-
-      final check = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/1.0/solicitudTransporte/existe-pendiente?clienteId=$clienteId&conductorId=$conductorId'),
-      );
-      final json = jsonDecode(check.body);
-      final existe = json['existe'] == true;
-
-      setState(() {
-        _solicitudEnviada = existe;
-        _enviandoSolicitud = false;
-      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -140,21 +156,36 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
           ),
         );
       }
-    } catch (e) {
-      setState(() {
-        _enviandoSolicitud = false;
-      });
+    }
+
+    void _onSolicitudEstadoActualizado(data) {
+      widget.socket.off('solicitud:estadoActualizado', _onSolicitudEstadoActualizado);
+      widget.socket.off('solicitud:error', _onSolicitudError);
+
+      print('🔵 Estado de solicitud actualizado: $data');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al enviar solicitud: $e'),
-            backgroundColor: ClienteStyles.errorColor,
+            content: const Text('Solicitud aceptada.'),
+            backgroundColor: ClienteStyles.successColor,
           ),
         );
       }
     }
+
+    widget.socket.on('solicitud:creada', _onSolicitudCreada);
+    widget.socket.on('solicitud:error', _onSolicitudError);
+    widget.socket.on('solicitud:estadoActualizado', _onSolicitudEstadoActualizado);
+
+
+    // Emitir la solicitud
+    widget.socket.emit('solicitud:crear', {
+      'clienteId': clienteId,
+      'conductorId': conductorId,
+    });
   }
+
 
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Padding(
@@ -164,7 +195,7 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
           Container(
             padding: const EdgeInsets.all(ClienteStyles.spacing8),
             decoration: BoxDecoration(
-              color: ClienteStyles.primaryGreen.withOpacity(0.1),
+              color: ClienteStyles.primaryGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(ClienteStyles.radiusSmall),
             ),
             child: Icon(
@@ -252,7 +283,7 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
                   Container(
                     padding: const EdgeInsets.all(ClienteStyles.spacing24),
                     decoration: BoxDecoration(
-                      color: ClienteStyles.primaryGreen.withOpacity(0.1),
+                      color: ClienteStyles.primaryGreen.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(ClienteStyles.radiusLarge),
                         topRight: Radius.circular(ClienteStyles.radiusLarge),
@@ -374,7 +405,7 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
                     Container(
                       padding: const EdgeInsets.all(ClienteStyles.spacing16),
                       decoration: BoxDecoration(
-                        color: ClienteStyles.warningColor.withOpacity(0.1),
+                        color: ClienteStyles.warningColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
                       ),
                       child: Row(
@@ -407,10 +438,10 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
               Container(
                 padding: const EdgeInsets.all(ClienteStyles.spacing20),
                 decoration: BoxDecoration(
-                  color: ClienteStyles.accentBlue.withOpacity(0.1),
+                  color: ClienteStyles.accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
                   border: Border.all(
-                    color: ClienteStyles.accentBlue.withOpacity(0.3),
+                    color: ClienteStyles.accentBlue.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Column(
@@ -461,7 +492,7 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
                     style: TextStyle(fontSize: 16),
                   ),
                   style: ClienteStyles.primaryButtonStyle.copyWith(
-                    shape: MaterialStateProperty.all(
+                    shape: WidgetStatePropertyAll(
                       RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
                       ),

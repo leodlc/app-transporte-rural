@@ -69,49 +69,72 @@ module.exports = (socket, io) => {
     }
   });
 
-
-    // Evento para desactivar ubicación y eliminarla de MongoDB + Firestore
-    socket.on('ubicacion:desactivar', async (data) => {
+  // Evento para desactivar ubicación y eliminarla de MongoDB + Firestore
+  socket.on('ubicacion:desactivar', async (data) => {
     try {
-        const { conductorId } = data;
+      const { conductorId } = data;
 
-        if (!conductorId) {
+      if (!conductorId) {
         console.log('conductorId faltante');
         return;
-        }
+      }
 
-        const conductor = await Conductor.findById(conductorId);
-        if (!conductor) {
+      const conductor = await Conductor.findById(conductorId);
+      if (!conductor) {
         console.log('Conductor no encontrado');
         return;
-        }
+      }
 
-        // Eliminar ubicación en MongoDB si existe
-        if (conductor.ubicacion) {
+      // Eliminar ubicación en MongoDB si existe
+      if (conductor.ubicacion) {
         await Ubicacion.findByIdAndDelete(conductor.ubicacion);
         conductor.ubicacion = null;
-        }
+      }
 
-        // Desactivar ubicación
-        conductor.ubicacionActiva = false;
-        await conductor.save();
+      // Desactivar ubicación
+      conductor.ubicacionActiva = false;
+      await conductor.save();
 
-        // Eliminar documento de Firestore
-        await firestore.collection('conductoresUbicaciones')
+      // Eliminar documento de Firestore
+      await firestore.collection('conductoresUbicaciones')
         .doc(conductorId.toString())
         .delete();
 
-        // Emitir evento global
-        io.emit('ubicacion-conductor-desactivada', {
+      // Emitir evento global
+      io.emit('ubicacion-conductor-desactivada', {
         conductorId: conductor._id.toString(),
         nombre: conductor.nombre,
         ubicacionActiva: false
-        });
+      });
 
-        console.log(`Ubicación desactivada y eliminada para ${conductor.nombre}`);
+      console.log(`Ubicación desactivada y eliminada para ${conductor.nombre}`);
     } catch (err) {
-        console.error('Error al desactivar ubicación:', err);
+      console.error('Error al desactivar ubicación:', err);
     }
-    });
+  });
+
+  // Evento para obtener los conductores
+  socket.on('solicitar-conductores', async () => {
+    try {
+      const conductoresActivos = await Conductor.find({ ubicacionActiva: true }).populate('ubicacion');
+
+      const resultado = conductoresActivos.map(conductor => {
+        return {
+          conductorId: conductor._id.toString(),
+          nombre: conductor.nombre,
+          lat: conductor.ubicacion?.lat || 0,
+          lng: conductor.ubicacion?.lng || 0,
+          ubicacionActiva: conductor.ubicacionActiva,
+        };
+      });
+
+      socket.emit('conductores-activos', resultado);
+      console.log(`Enviando ${resultado.length} conductores activos al cliente`);
+    } catch (err) {
+      console.error('Error al obtener conductores activos:', err);
+      socket.emit('conductores-activos', []); // Opcional: evitar crash en el frontend
+    }
+  });
+
 
 };

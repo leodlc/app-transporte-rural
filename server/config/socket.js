@@ -10,16 +10,30 @@ module.exports = {
     });
 
     io.on('connection', (socket) => {
-      console.log('Cliente conectado:', socket.id);
+      const { tipo, id } = socket.handshake.query;
+
+      if (tipo === 'cliente') {
+        socket.join(`cliente_${id}`);
+        console.log(`Cliente ${id} conectado`);
+      } else if (tipo === 'conductor') { 
+        socket.join(`conductor_${id}`);
+        console.log(`Conductor ${id} conectado`);
+      }
+
+      console.log(socket.handshake.query);
+      console.log('Usuario conectado:', socket.id);
+
+
+
+      socket.on('disconnect', () => {
+        console.log(`Usuario desconectado: ${socket.id}`);
+      });
 
       // Delegar a los controladores de WebSocket
       require('../app/sockets/conductor.socket')(socket, io);
       require('../app/sockets/cliente.socket')(socket, io);
+      require('../app/sockets/solicitud.socket')(socket, io);
 
-
-      socket.on('disconnect', () => {
-        console.log('Cliente desconectado:', socket.id);
-      });
     });
 
     return io;

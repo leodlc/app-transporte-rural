@@ -7,11 +7,6 @@ require('./config/firebase'); // Asegura que Firebase se inicializa
 const { initSocket } = require('./config/socket'); // importar socket
 const iniciarJobExpiracionSolicitudes = require('./app/cron/solicitud-expiracion');
 
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
-require('./config/firebase'); // Firebase se inicializa aquí
 
 const app = express();
 const server = http.createServer(app);
