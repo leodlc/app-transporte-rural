@@ -30,6 +30,7 @@ module.exports = {
       });
 
       // Delegar a los controladores de WebSocket
+      require('../app/sockets/viaje.socket')(socket, io);
       require('../app/sockets/conductor.socket')(socket, io);
       require('../app/sockets/cliente.socket')(socket, io);
       require('../app/sockets/solicitud.socket')(socket, io);

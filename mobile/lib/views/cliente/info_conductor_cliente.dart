@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/views/cliente/viaje_cliente.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -162,15 +163,52 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
       widget.socket.off('solicitud:estadoActualizado', _onSolicitudEstadoActualizado);
       widget.socket.off('solicitud:error', _onSolicitudError);
 
-      print('🔵 Estado de solicitud actualizado: $data');
+      print('Estado de solicitud actualizado: $data');
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Solicitud aceptada.'),
-            backgroundColor: ClienteStyles.successColor,
-          ),
-        );
+      final estado = data['estado'];
+
+      if (estado == 'aceptada') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('¡Solicitud aceptada! Iniciando viaje...'),
+              backgroundColor: ClienteStyles.successColor,
+            ),
+          );
+        }
+
+        print("escuchando viaje:iniciado");
+        // Escuchar cuando el viaje se inicie
+        widget.socket.on('viaje:iniciado', (viajeData) {
+          widget.socket.off('viaje:iniciado');
+
+          print("viaje iniciado entro al metodo");
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ViajeCliente(
+                  viajeData: viajeData['viaje'],
+                  conductorData: _infoConductor!,
+                ),
+              ),
+            );
+          }
+        });
+      } else if (estado == 'rechazada') {
+        setState(() {
+          _solicitudEnviada = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Solicitud rechazada. Puedes intentar con otro conductor.'),
+              backgroundColor: ClienteStyles.warningColor,
+            ),
+          );
+        }
       }
     }
 

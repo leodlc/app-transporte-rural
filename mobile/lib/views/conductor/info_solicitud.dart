@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/views/conductor/conductor_styles.dart';
 import 'package:mobile/ws/SocketManager.dart';
 import '../../controllers/notificacion_controller.dart';
+import 'viaje_conductor.dart';
 
 class InfoSolicitud extends StatefulWidget {
   final Map<String, dynamic> solicitud;
@@ -59,6 +60,7 @@ class _InfoSolicitudState extends State<InfoSolicitud> {
       _socketManager.off('solicitud:estadoActualizado', _onSolicitudActualizar);
       _socketManager.off('solicitud:error', _onSolicitudError);
 
+      final cliente = widget.solicitud['clienteId'];
 
       // Notificación push (opcional)
       _notificacionController.enviarNotificacion(
@@ -78,7 +80,34 @@ class _InfoSolicitudState extends State<InfoSolicitud> {
 
       _socketManager.emit('solicitud:obtener', {'conductorId': _conductorId});
 
-      Navigator.pop(context);
+      // NUEVA LÓGICA: Si la solicitud fue aceptada, iniciar el viaje y navegar
+      if (nuevoEstado == 'aceptada') {
+        // Iniciar el viaje
+        _socketManager.emit('viaje:iniciar', {
+          'solicitudId': widget.solicitud['_id'],
+          'conductorId': widget.solicitud['conductorId'],
+          'clienteId': cliente['_id'],
+        });
+
+        // Escuchar cuando el viaje se inicie exitosamente
+        _socketManager.on('viaje:iniciado', (viajeData) {
+          _socketManager.off('viaje:iniciado');
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ViajeConductor(
+                  viajeData: viajeData['viaje'],
+                  clienteData: cliente,
+                ),
+              ),
+            );
+          }
+        });
+      } else {
+        Navigator.pop(context);
+      }
     }
 
     _socketManager.on('solicitud:estadoActualizado', _onSolicitudActualizar);
