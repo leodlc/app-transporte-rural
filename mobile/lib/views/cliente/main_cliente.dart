@@ -200,7 +200,7 @@ class _MainClienteState extends State<MainCliente> {
                           vertical: ClienteStyles.spacing8,
                         ),
                         decoration: BoxDecoration(
-                          color: ClienteStyles.surfaceWhite.withOpacity(0.2),
+                          color: ClienteStyles.surfaceWhite.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(ClienteStyles.radiusCircular),
                         ),
                         child: Text(

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:mobile/config/api_config.dart';
 import 'package:mobile/views/conductor/conductor_styles.dart';
 import 'package:mobile/ws/SocketManager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../controllers/notificacion_controller.dart';
 
 class ViajeConductor extends StatefulWidget {
@@ -24,6 +28,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
   final SocketManager _socketManager = SocketManager.instance;
   final NotificacionController _notificacionController = NotificacionController();
 
+  // Variables existentes
   String? _conductorId;
   String? _viajeId;
   String? _salaViaje;
@@ -32,6 +37,16 @@ class _ViajeConductorState extends State<ViajeConductor> {
   bool _enviandoAccion = false;
   Timer? _locationTimer;
   bool _compartiendoUbicacion = false;
+
+  // Variables para Google Maps
+  GoogleMapController? _mapController;
+  Position? _ubicacionConductor;
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
+  bool _mapaListo = false;
+
+  // API Key de Google Maps (reemplaza con tu clave)
+  static const String _googleMapsApiKey = ApiConfig.googleMapsApiKey;
 
   @override
   void initState() {
@@ -82,12 +97,16 @@ class _ViajeConductorState extends State<ViajeConductor> {
       return;
     }
 
-    // Compartir ubicación cada 3 segundos (más frecuente para conductor)
+    // Compartir ubicación cada 3 segundos
     _locationTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
       try {
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
+
+        setState(() {
+          _ubicacionConductor = position;
+        });
 
         _socketManager.emit('viaje:ubicacion-actualizar', {
           'viajeId': _viajeId,
@@ -96,6 +115,9 @@ class _ViajeConductorState extends State<ViajeConductor> {
           'lat': position.latitude,
           'lng': position.longitude,
         });
+
+        // Actualizar marcadores y ruta
+        await _actualizarMarcadoresYRuta();
 
         print('🚗 Ubicación del conductor enviada: ${position.latitude}, ${position.longitude}');
 
@@ -110,6 +132,166 @@ class _ViajeConductorState extends State<ViajeConductor> {
         print('Error obteniendo ubicación del conductor: $e');
       }
     });
+  }
+
+  Future<void> _actualizarMarcadoresYRuta() async {
+    if (_ubicacionConductor == null) return;
+
+    Set<Marker> nuevosMarkers = {};
+
+    // Marcador del conductor
+    nuevosMarkers.add(
+      Marker(
+        markerId: MarkerId('conductor'),
+        position: LatLng(_ubicacionConductor!.latitude, _ubicacionConductor!.longitude),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: InfoWindow(title: 'Mi ubicación'),
+      ),
+    );
+
+    // Determinar destino según el estado del viaje
+    LatLng? destino;
+    String tituloDestino = '';
+
+    if (_estadoViaje == 'iniciado' || _estadoViaje == 'llegando') {
+      // Ruta hacia el cliente
+      if (_ubicacionCliente != null) {
+        destino = LatLng(_ubicacionCliente!['lat'], _ubicacionCliente!['lng']);
+        tituloDestino = 'Cliente - ${widget.clienteData['nombre']}';
+      }
+    } else if (_estadoViaje == 'en_curso') {
+      // Ruta hacia el destino del viaje
+      if (widget.viajeData['destino'] != null) {
+        destino = LatLng(
+            widget.viajeData['destino']['lat'],
+            widget.viajeData['destino']['lng']
+        );
+        tituloDestino = 'Destino';
+      }
+    }
+
+    if (destino != null) {
+      // Marcador del destino
+      nuevosMarkers.add(
+        Marker(
+          markerId: MarkerId('destino'),
+          position: destino,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(title: tituloDestino),
+        ),
+      );
+
+      // Obtener y dibujar la ruta
+      await _obtenerRuta(
+        LatLng(_ubicacionConductor!.latitude, _ubicacionConductor!.longitude),
+        destino,
+      );
+    }
+
+    setState(() {
+      _markers = nuevosMarkers;
+    });
+
+    // Ajustar la cámara para mostrar todos los marcadores
+    if (_mapController != null && _markers.length > 1) {
+      _ajustarCamara();
+    }
+  }
+
+  Future<void> _obtenerRuta(LatLng origen, LatLng destino) async {
+    final String url = 'https://maps.googleapis.com/maps/api/directions/json'
+        '?origin=${origen.latitude},${origen.longitude}'
+        '&destination=${destino.latitude},${destino.longitude}'
+        '&key=$_googleMapsApiKey';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+          final polylinePoints = _decodificarPolyline(route['overview_polyline']['points']);
+
+          setState(() {
+            _polylines = {
+              Polyline(
+                polylineId: PolylineId('ruta'),
+                points: polylinePoints,
+                color: _estadoViaje == 'en_curso' ? Colors.green : ConductorStyles.primaryColor,
+                width: 5,
+              ),
+            };
+          });
+        }
+      }
+    } catch (e) {
+      print('Error obteniendo ruta: $e');
+    }
+  }
+
+  List<LatLng> _decodificarPolyline(String encoded) {
+    List<LatLng> polylineCoordinates = [];
+    int index = 0;
+    int len = encoded.length;
+    int lat = 0;
+    int lng = 0;
+
+    while (index < len) {
+      int b;
+      int shift = 0;
+      int result = 0;
+
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      polylineCoordinates.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+
+    return polylineCoordinates;
+  }
+
+  void _ajustarCamara() {
+    if (_markers.isEmpty) return;
+
+    double minLat = _markers.first.position.latitude;
+    double maxLat = _markers.first.position.latitude;
+    double minLng = _markers.first.position.longitude;
+    double maxLng = _markers.first.position.longitude;
+
+    for (Marker marker in _markers) {
+      minLat = minLat > marker.position.latitude ? marker.position.latitude : minLat;
+      maxLat = maxLat < marker.position.latitude ? marker.position.latitude : maxLat;
+      minLng = minLng > marker.position.longitude ? marker.position.longitude : minLng;
+      maxLng = maxLng < marker.position.longitude ? marker.position.longitude : maxLng;
+    }
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        100.0, // padding
+      ),
+    );
   }
 
   void _configurarEventosSocket() {
@@ -139,6 +321,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
         };
       });
       print('📍 Ubicación del cliente actualizada: ${data['lat']}, ${data['lng']}');
+      _actualizarMarcadoresYRuta();
     }
   }
 
@@ -160,6 +343,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
     setState(() {
       _estadoViaje = 'en_curso';
     });
+    _actualizarMarcadoresYRuta(); // Actualizar ruta al destino
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -174,7 +358,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
     setState(() {
       _estadoViaje = 'finalizado';
     });
-    _locationTimer?.cancel(); // Detener el compartir ubicación
+    _locationTimer?.cancel();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -182,7 +366,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
           backgroundColor: ConductorStyles.successColor,
         ),
       );
-      // Regresar a la pantalla anterior después de 3 segundos
       Future.delayed(Duration(seconds: 3), () {
         if (mounted) Navigator.pop(context);
       });
@@ -193,7 +376,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
     setState(() {
       _estadoViaje = 'cancelado';
     });
-    _locationTimer?.cancel(); // Detener el compartir ubicación
+    _locationTimer?.cancel();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -218,6 +401,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
     }
   }
 
+  // Métodos de acciones (sin cambios)
   void _marcarLlegando() {
     setState(() {
       _enviandoAccion = true;
@@ -228,7 +412,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
       'conductorId': _conductorId,
     });
 
-    // Notificar al cliente
     _notificacionController.enviarNotificacion(
       emisorId: _conductorId!,
       rolEmisor: 'conductor',
@@ -253,7 +436,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
       'conductorId': _conductorId,
     });
 
-    // Notificar al cliente
     _notificacionController.enviarNotificacion(
       emisorId: _conductorId!,
       rolEmisor: 'conductor',
@@ -279,7 +461,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
       'ubicacionFinal': _ubicacionCliente,
     });
 
-    // Notificar al cliente
     _notificacionController.enviarNotificacion(
       emisorId: _conductorId!,
       rolEmisor: 'conductor',
@@ -330,7 +511,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
                   'motivo': motivo.isEmpty ? 'Cancelado por el conductor' : motivo,
                 });
 
-                // Notificar al cliente
                 _notificacionController.enviarNotificacion(
                   emisorId: _conductorId!,
                   rolEmisor: 'conductor',
@@ -400,13 +580,19 @@ class _ViajeConductorState extends State<ViajeConductor> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Icon(icon, size: 48, color: color),
-          SizedBox(height: 12),
-          Text(titulo, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-          SizedBox(height: 4),
-          Text(descripcion, style: TextStyle(fontSize: 14, color: color)),
+          Icon(icon, size: 32, color: color),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titulo, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                Text(descripcion, style: TextStyle(fontSize: 14, color: color)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -426,73 +612,63 @@ class _ViajeConductorState extends State<ViajeConductor> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text('Información del Cliente', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          SizedBox(height: 12),
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: ConductorStyles.primaryColor,
-                child: Text(widget.clienteData['nombre'][0].toUpperCase(), style: TextStyle(color: Colors.white)),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.clienteData['nombre'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    Text(widget.clienteData['telefono'], style: TextStyle(fontSize: 14, color: ConductorStyles.textSecondary)),
-                  ],
-                ),
-              ),
-            ],
+          CircleAvatar(
+            backgroundColor: ConductorStyles.primaryColor,
+            child: Text(widget.clienteData['nombre'][0].toUpperCase(), style: TextStyle(color: Colors.white)),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.clienteData['nombre'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(widget.clienteData['telefono'], style: TextStyle(fontSize: 14, color: ConductorStyles.textSecondary)),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildUbicacionCliente() {
-    if (_ubicacionCliente == null) {
-      return Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.location_off, color: ConductorStyles.textSecondary),
-            SizedBox(width: 12),
-            Text('Esperando ubicación del cliente...', style: TextStyle(color: ConductorStyles.textSecondary)),
-          ],
-        ),
-      );
-    }
-
+  Widget _buildMapa() {
     return Container(
-      padding: EdgeInsets.all(16),
+      height: 300,
       decoration: BoxDecoration(
-        color: ConductorStyles.successColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.location_on, color: ConductorStyles.successColor),
-              SizedBox(width: 8),
-              Text('Ubicación del Cliente', style: TextStyle(fontWeight: FontWeight.w600)),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
-          SizedBox(height: 8),
-          Text('Lat: ${_ubicacionCliente!['lat'].toStringAsFixed(6)}'),
-          Text('Lng: ${_ubicacionCliente!['lng'].toStringAsFixed(6)}'),
-          Text('Actualizado: ${_ubicacionCliente!['timestamp']}', style: TextStyle(fontSize: 12, color: ConductorStyles.textSecondary)),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: GoogleMap(
+          onMapCreated: (GoogleMapController controller) {
+            _mapController = controller;
+            setState(() {
+              _mapaListo = true;
+            });
+          },
+          initialCameraPosition: CameraPosition(
+            target: LatLng(
+              _ubicacionConductor?.latitude ?? -0.1807, // Quito por defecto
+              _ubicacionConductor?.longitude ?? -78.4678,
+            ),
+            zoom: 14.0,
+          ),
+          markers: _markers,
+          polylines: _polylines,
+          myLocationEnabled: true,
+          myLocationButtonEnabled: true,
+          trafficEnabled: true,
+          mapType: MapType.normal,
+        ),
       ),
     );
   }
@@ -601,7 +777,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
         break;
     }
 
-    // Botón de cancelar (excepto si ya está finalizado o cancelado)
     if (!['finalizado', 'cancelado'].contains(_estadoViaje)) {
       botones.add(
         OutlinedButton.icon(
@@ -628,6 +803,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
   @override
   void dispose() {
     _locationTimer?.cancel();
+    _mapController?.dispose();
     _socketManager.off('viaje:unido');
     _socketManager.off('viaje:ubicacion-recibida');
     _socketManager.off('viaje:conductor-llegando');
@@ -658,12 +834,12 @@ class _ViajeConductorState extends State<ViajeConductor> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildEstadoCard(),
-            SizedBox(height: 20),
-            _buildEstadoUbicacion(),
-            SizedBox(height: 20),
+            SizedBox(height: 16),
             _buildClienteInfo(),
-            SizedBox(height: 20),
-            _buildUbicacionCliente(),
+            SizedBox(height: 16),
+            _buildEstadoUbicacion(),
+            SizedBox(height: 16),
+            _buildMapa(),
             SizedBox(height: 20),
             _buildAcciones(),
           ],
