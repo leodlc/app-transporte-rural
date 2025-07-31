@@ -26,7 +26,6 @@ class _ViajeClienteState extends State<ViajeCliente> {
 
   String? _clienteId;
   String? _viajeId;
-  String? _salaViaje;
   String _estadoViaje = 'iniciado';
   Map<String, dynamic>? _ubicacionConductor;
   Timer? _locationTimer;
@@ -44,7 +43,6 @@ class _ViajeClienteState extends State<ViajeCliente> {
     final prefs = await SharedPreferences.getInstance();
     _clienteId = prefs.getString('id');
     _viajeId = widget.viajeData['_id'];
-    _salaViaje = 'viaje_$_viajeId';
     _estadoViaje = widget.viajeData['estado'] ?? 'iniciado';
 
     // Unirse a la sala del viaje
@@ -110,9 +108,6 @@ class _ViajeClienteState extends State<ViajeCliente> {
 
   void _onViajeUnido(dynamic data) {
     print('👤 Cliente unido al viaje: $data');
-    setState(() {
-      _salaViaje = data['salaViaje'];
-    });
   }
 
   void _onUbicacionRecibida(dynamic data) {

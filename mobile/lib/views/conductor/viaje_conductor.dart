@@ -31,7 +31,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
   // Variables existentes
   String? _conductorId;
   String? _viajeId;
-  String? _salaViaje;
   String _estadoViaje = 'iniciado';
   Map<String, dynamic>? _ubicacionCliente;
   bool _enviandoAccion = false;
@@ -43,9 +42,17 @@ class _ViajeConductorState extends State<ViajeConductor> {
   Position? _ubicacionConductor;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  bool _mapaListo = false;
 
-  // API Key de Google Maps (reemplaza con tu clave)
+  // NUEVAS VARIABLES PARA OPTIMIZACIÓN
+  LatLng? _ultimoDestinoCargado; // Para trackear si ya cargamos la ruta
+  String? _ultimoEstadoRuta; // Para saber si cambió el estado
+  bool _rutaCargada = false; // Flag para evitar múltiples cargas
+  Map<String, dynamic>? _datosRutaActual; // Cache de la ruta actual
+  LatLng? _ultimaUbicacionRuta; // Última ubicación desde donde se calculó la ruta
+  DateTime? _ultimaActualizacionRuta; // Control de tiempo para actualizaciones de ruta
+  static const int _intervaloActualizacionRuta = 30; // Actualizar ruta cada 30 segundos
+
+  // API Key de Google Maps
   static const String _googleMapsApiKey = ApiConfig.googleMapsApiKey;
 
   @override
@@ -54,13 +61,13 @@ class _ViajeConductorState extends State<ViajeConductor> {
     _inicializarViaje();
     _configurarEventosSocket();
     _iniciarCompartirUbicacion();
+    _cargarRutaInicial(); // Cargar ruta una sola vez al inicio
   }
 
   void _inicializarViaje() async {
     final prefs = await SharedPreferences.getInstance();
     _conductorId = prefs.getString('id');
     _viajeId = widget.viajeData['_id'];
-    _salaViaje = 'viaje_$_viajeId';
     _estadoViaje = widget.viajeData['estado'] ?? 'iniciado';
 
     // Unirse a la sala del viaje
@@ -71,6 +78,24 @@ class _ViajeConductorState extends State<ViajeConductor> {
     });
   }
 
+  // METODO OPTIMIZADO: Cargar ruta solo cuando sea necesario
+  Future<void> _cargarRutaInicial() async {
+    // Esperar a tener la ubicación del conductor
+    await _esperarUbicacionConductor();
+
+    // Cargar la ruta según el estado actual
+    await _cargarRutaSegunEstado();
+  }
+
+  Future<void> _esperarUbicacionConductor() async {
+    int intentos = 0;
+    while (_ubicacionConductor == null && intentos < 10) {
+      await Future.delayed(Duration(milliseconds: 500));
+      intentos++;
+    }
+  }
+
+  // METODO PRINCIPAL OPTIMIZADO: Actualiza marcador y ruta inteligentemente
   void _iniciarCompartirUbicacion() async {
     setState(() {
       _compartiendoUbicacion = true;
@@ -101,7 +126,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
     _locationTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
       try {
         Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+            locationSettings: AndroidSettings(accuracy: LocationAccuracy.high)
         );
 
         setState(() {
@@ -116,8 +141,8 @@ class _ViajeConductorState extends State<ViajeConductor> {
           'lng': position.longitude,
         });
 
-        // Actualizar marcadores y ruta
-        await _actualizarMarcadoresYRuta();
+        // OPTIMIZACIÓN INTELIGENTE: Decidir si actualizar solo marcador o toda la ruta
+        await _actualizarUbicacionInteligente();
 
         print('🚗 Ubicación del conductor enviada: ${position.latitude}, ${position.longitude}');
 
@@ -134,12 +159,63 @@ class _ViajeConductorState extends State<ViajeConductor> {
     });
   }
 
-  Future<void> _actualizarMarcadoresYRuta() async {
+  // NUEVO METODO: Lógica inteligente para decidir qué actualizar
+  Future<void> _actualizarUbicacionInteligente() async {
     if (_ubicacionConductor == null) return;
 
-    Set<Marker> nuevosMarkers = {};
+    final ubicacionActual = LatLng(_ubicacionConductor!.latitude, _ubicacionConductor!.longitude);
+    final ahora = DateTime.now();
 
-    // Marcador del conductor
+    // Siempre actualizar el marcador del conductor
+    _actualizarSoloMarcadorConductor();
+
+    // Decidir si necesitamos actualizar la ruta completa
+    bool necesitaActualizarRuta = false;
+
+    // Caso 1: Primera vez cargando la ruta
+    if (!_rutaCargada || _ultimaUbicacionRuta == null) {
+      necesitaActualizarRuta = true;
+      print('🗺️ Cargando ruta inicial');
+    }
+    // Caso 2: Ha pasado el tiempo mínimo desde la última actualización
+    else if (_ultimaActualizacionRuta == null ||
+        ahora.difference(_ultimaActualizacionRuta!).inSeconds >= _intervaloActualizacionRuta) {
+      necesitaActualizarRuta = true;
+      print('🗺️ Actualizando ruta por tiempo (${ahora.difference(_ultimaActualizacionRuta!).inSeconds}s)');
+    }
+    // Caso 3: El conductor se ha movido una distancia significativa (más de 100 metros)
+    else if (_distanciaEnMetros(_ultimaUbicacionRuta!, ubicacionActual) > 100) {
+      necesitaActualizarRuta = true;
+      print('🗺️ Actualizando ruta por distancia (${_distanciaEnMetros(_ultimaUbicacionRuta!, ubicacionActual).toStringAsFixed(0)}m)');
+    }
+
+    if (necesitaActualizarRuta) {
+      await _cargarRutaSegunEstado();
+      _ultimaUbicacionRuta = ubicacionActual;
+      _ultimaActualizacionRuta = ahora;
+    }
+  }
+
+  // NUEVO METODO: Calcular distancia entre dos puntos en metros
+  double _distanciaEnMetros(LatLng punto1, LatLng punto2) {
+    return Geolocator.distanceBetween(
+        punto1.latitude,
+        punto1.longitude,
+        punto2.latitude,
+        punto2.longitude
+    );
+  }
+
+  // NUEVO METODO: Solo actualiza el marcador del conductor
+  void _actualizarSoloMarcadorConductor() {
+    if (_ubicacionConductor == null) return;
+
+    Set<Marker> nuevosMarkers = Set.from(_markers);
+
+    // Remover marcador anterior del conductor si existe
+    nuevosMarkers.removeWhere((marker) => marker.markerId.value == 'conductor');
+
+    // Agregar marcador actualizado del conductor
     nuevosMarkers.add(
       Marker(
         markerId: MarkerId('conductor'),
@@ -149,7 +225,15 @@ class _ViajeConductorState extends State<ViajeConductor> {
       ),
     );
 
-    // Determinar destino según el estado del viaje
+    setState(() {
+      _markers = nuevosMarkers;
+    });
+  }
+
+  // METODO OPTIMIZADO: Solo carga ruta cuando cambia el estado o destino
+  Future<void> _cargarRutaSegunEstado() async {
+    if (_ubicacionConductor == null) return;
+
     LatLng? destino;
     String tituloDestino = '';
 
@@ -170,27 +254,58 @@ class _ViajeConductorState extends State<ViajeConductor> {
       }
     }
 
-    if (destino != null) {
-      // Marcador del destino
+    // OPTIMIZACIÓN: Solo cargar ruta si cambió el destino o estado
+    if (destino != null &&
+        (_ultimoDestinoCargado != destino || _ultimoEstadoRuta != _estadoViaje)) {
+
+      print('🗺️ Cargando nueva ruta hacia: $tituloDestino');
+
+      await _cargarRutaCompleta(destino, tituloDestino);
+
+      // Actualizar cache
+      _ultimoDestinoCargado = destino;
+      _ultimoEstadoRuta = _estadoViaje;
+      _rutaCargada = true;
+    }
+  }
+
+  // METODO SEPARADO: Carga la ruta completa solo cuando es necesario
+  Future<void> _cargarRutaCompleta(LatLng destino, String tituloDestino) async {
+    Set<Marker> nuevosMarkers = {};
+
+    // Marcador del conductor
+    if (_ubicacionConductor != null) {
       nuevosMarkers.add(
         Marker(
-          markerId: MarkerId('destino'),
-          position: destino,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(title: tituloDestino),
+          markerId: MarkerId('conductor'),
+          position: LatLng(_ubicacionConductor!.latitude, _ubicacionConductor!.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: InfoWindow(title: 'Mi ubicación'),
         ),
       );
+    }
 
-      // Obtener y dibujar la ruta
+    // Marcador del destino
+    nuevosMarkers.add(
+      Marker(
+        markerId: MarkerId('destino'),
+        position: destino,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(title: tituloDestino),
+      ),
+    );
+
+    setState(() {
+      _markers = nuevosMarkers;
+    });
+
+    // Obtener y dibujar la ruta UNA SOLA VEZ
+    if (_ubicacionConductor != null) {
       await _obtenerRuta(
         LatLng(_ubicacionConductor!.latitude, _ubicacionConductor!.longitude),
         destino,
       );
     }
-
-    setState(() {
-      _markers = nuevosMarkers;
-    });
 
     // Ajustar la cámara para mostrar todos los marcadores
     if (_mapController != null && _markers.length > 1) {
@@ -212,6 +327,13 @@ class _ViajeConductorState extends State<ViajeConductor> {
           final route = data['routes'][0];
           final polylinePoints = _decodificarPolyline(route['overview_polyline']['points']);
 
+          // Guardar datos de la ruta para referencia
+          _datosRutaActual = {
+            'distancia': route['legs'][0]['distance']['text'],
+            'duracion': route['legs'][0]['duration']['text'],
+            'puntos': polylinePoints,
+          };
+
           setState(() {
             _polylines = {
               Polyline(
@@ -222,6 +344,8 @@ class _ViajeConductorState extends State<ViajeConductor> {
               ),
             };
           });
+
+          print('🛣️ Ruta cargada: ${_datosRutaActual!['distancia']} - ${_datosRutaActual!['duracion']}');
         }
       }
     } catch (e) {
@@ -306,9 +430,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
 
   void _onViajeUnido(dynamic data) {
     print('🚗 Conductor unido al viaje: $data');
-    setState(() {
-      _salaViaje = data['salaViaje'];
-    });
   }
 
   void _onUbicacionRecibida(dynamic data) {
@@ -321,7 +442,11 @@ class _ViajeConductorState extends State<ViajeConductor> {
         };
       });
       print('📍 Ubicación del cliente actualizada: ${data['lat']}, ${data['lng']}');
-      _actualizarMarcadoresYRuta();
+
+      // OPTIMIZACIÓN: Solo cargar ruta si es la primera vez o cambió significativamente
+      if (!_rutaCargada) {
+        _cargarRutaSegunEstado();
+      }
     }
   }
 
@@ -343,7 +468,8 @@ class _ViajeConductorState extends State<ViajeConductor> {
     setState(() {
       _estadoViaje = 'en_curso';
     });
-    _actualizarMarcadoresYRuta(); // Actualizar ruta al destino
+    // OPTIMIZACIÓN: Solo cargar nueva ruta cuando cambia el estado
+    _cargarRutaSegunEstado();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -576,9 +702,9 @@ class _ViajeConductorState extends State<ViajeConductor> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -590,6 +716,15 @@ class _ViajeConductorState extends State<ViajeConductor> {
               children: [
                 Text(titulo, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
                 Text(descripcion, style: TextStyle(fontSize: 14, color: color)),
+                // NUEVO: Mostrar información de la ruta si está disponible
+                if (_datosRutaActual != null)
+                  Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${_datosRutaActual!['distancia']} • ${_datosRutaActual!['duracion']}',
+                      style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8)),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -606,7 +741,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -640,7 +775,7 @@ class _ViajeConductorState extends State<ViajeConductor> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -651,9 +786,10 @@ class _ViajeConductorState extends State<ViajeConductor> {
         child: GoogleMap(
           onMapCreated: (GoogleMapController controller) {
             _mapController = controller;
-            setState(() {
-              _mapaListo = true;
-            });
+            // Cargar ruta inicial cuando el mapa esté listo
+            if (!_rutaCargada) {
+              _cargarRutaSegunEstado();
+            }
           },
           initialCameraPosition: CameraPosition(
             target: LatLng(
@@ -678,13 +814,13 @@ class _ViajeConductorState extends State<ViajeConductor> {
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _compartiendoUbicacion
-            ? ConductorStyles.successColor.withOpacity(0.1)
-            : ConductorStyles.warningColor.withOpacity(0.1),
+            ? ConductorStyles.successColor.withValues(alpha: 0.1)
+            : ConductorStyles.warningColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: (_compartiendoUbicacion
               ? ConductorStyles.successColor
-              : ConductorStyles.warningColor).withOpacity(0.3),
+              : ConductorStyles.warningColor).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -716,13 +852,13 @@ class _ViajeConductorState extends State<ViajeConductor> {
                 SizedBox(height: 4),
                 Text(
                   _compartiendoUbicacion
-                      ? 'Actualización cada 3 segundos'
+                      ? 'Actualización cada 3 segundos • Ruta cada 30s'
                       : 'Verificar permisos de ubicación',
                   style: TextStyle(
                     fontSize: 12,
                     color: (_compartiendoUbicacion
                         ? ConductorStyles.successColor
-                        : ConductorStyles.warningColor).withOpacity(0.8),
+                        : ConductorStyles.warningColor).withValues(alpha: 0.8),
                   ),
                 ),
               ],

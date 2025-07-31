@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mobile/services/bloc/notifications_bloc.dart';
+import 'package:mobile/utils/geolocator_helper.dart';
 import 'package:mobile/ws/SocketManager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../cliente/info_conductor_cliente.dart';
@@ -20,6 +22,7 @@ class _TransporteClienteState extends State<TransporteCliente> {
   List<Map<String, dynamic>> _conductores = [];
   String _mensajeEstado = "Cargando conductores...";
   String? _clienteId;
+  Position? _ubicacionCliente;
 
   @override
   void initState() {
@@ -30,6 +33,7 @@ class _TransporteClienteState extends State<TransporteCliente> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _notificationsBloc.add(RequestPermissions());
       await _obtenerConductorId();
+      await _obtenerUbicacionCliente();
       if (_clienteId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se encontró ID de cliente')),
@@ -43,6 +47,29 @@ class _TransporteClienteState extends State<TransporteCliente> {
     final id = prefs.getString('id');
     setState(() {
       _clienteId = id;
+    });
+  }
+
+  Future<void> _obtenerUbicacionCliente() async {
+    bool servicioHabilitado = await Geolocator.isLocationServiceEnabled();
+    if (!servicioHabilitado) {
+      setState(() {
+        _mensajeEstado = "Activa la ubicación para ver conductores cercanos.";
+      });
+      return;
+    }
+
+    LocationPermission permiso = await Geolocator.checkPermission();
+    if (permiso == LocationPermission.denied) {
+      permiso = await Geolocator.requestPermission();
+      if (permiso == LocationPermission.denied) return;
+    }
+
+    if (permiso == LocationPermission.deniedForever) return;
+
+    final posicion = await Geolocator.getCurrentPosition(locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
+    setState(() {
+      _ubicacionCliente = posicion;
     });
   }
 
@@ -152,8 +179,6 @@ class _TransporteClienteState extends State<TransporteCliente> {
           final c = _conductores[index];
           final lat = (c['lat'] as num?)?.toDouble();
           final lng = (c['lng'] as num?)?.toDouble();
-          final latStr = lat != null ? lat.toStringAsFixed(6) : '--';
-          final lngStr = lng != null ? lng.toStringAsFixed(6) : '--';
 
           return InkWell(
             borderRadius: BorderRadius.circular(ClienteStyles.radiusLarge),
@@ -190,10 +215,39 @@ class _TransporteClienteState extends State<TransporteCliente> {
                           style: ClienteStyles.cardTitle,
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'Lat: $latStr, Lng: $lngStr',
-                          style: ClienteStyles.cardSubtitle,
-                        ),
+                        if (_ubicacionCliente != null && lat != null && lng != null)
+                          FutureBuilder<double>(
+                            future: GeolocatorHelper.calcularDistancia(
+                              _ubicacionCliente!.latitude,
+                              _ubicacionCliente!.longitude,
+                              lat,
+                              lng,
+                            ),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return Text(
+                                  'Calculando distancia...',
+                                  style: ClienteStyles.cardSubtitle,
+                                );
+                              } else if (snapshot.hasError) {
+                                return Text(
+                                  'Error al calcular distancia',
+                                  style: ClienteStyles.cardSubtitle.copyWith(color: Colors.red),
+                                );
+                              } else {
+                                final distancia = (snapshot.data ?? 0) / 1000;
+                                return Text(
+                                  'Aprox. ${distancia.toStringAsFixed(2)} km de distancia',
+                                  style: ClienteStyles.cardSubtitle,
+                                );
+                              }
+                            },
+                          )
+                        else
+                          Text(
+                            'Ubicación no disponible',
+                            style: ClienteStyles.cardSubtitle,
+                          ),
                       ],
                     ),
                   ),

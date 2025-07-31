@@ -4,6 +4,8 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../config/api_config.dart';
 import '../../controllers/cliente_controller.dart';
 import '../../controllers/notificacion_controller.dart';
@@ -23,19 +25,95 @@ class InfoConductorCliente extends StatefulWidget {
   State<InfoConductorCliente> createState() => _InfoConductorClienteState();
 }
 
-class _InfoConductorClienteState extends State<InfoConductorCliente> {
+class _InfoConductorClienteState extends State<InfoConductorCliente>
+    with SingleTickerProviderStateMixin {
   final NotificacionController _notificacionController = NotificacionController();
   final ClienteController _clienteController = ClienteController();
+  final TextEditingController _origenController = TextEditingController();
+  final TextEditingController _destinoController = TextEditingController();
+
   Map<String, dynamic>? _infoConductor;
   bool _cargando = true;
   bool _solicitudEnviada = false;
   bool _enviandoSolicitud = false;
+  bool _buscandoDestinos = false;
+  bool _buscandoOrigenes = false;
+  bool _mostrandoMapa = false;
+  bool _obteniendoUbicacion = false;
+
+  // Variables para origen y destino
+  Map<String, dynamic>? _origenSeleccionado;
+  Map<String, dynamic>? _destinoSeleccionado;
+  List<Map<String, dynamic>> _sugerenciasOrigen = [];
+  List<Map<String, dynamic>> _sugerenciasDestino = [];
+
+  // Variables para el mapa
+  GoogleMapController? _mapController;
+  LatLng _ubicacionActual = const LatLng(-0.1807, -78.4678); // Quito por defecto
+  Set<Marker> _markers = {};
+
+  // Control de pestañas
+  late TabController _tabController;
+  int _tabActual = 0; // 0: Origen, 1: Destino
+
+  // Modo de selección en mapa
+  String _modoSeleccionMapa = 'origen'; // 'origen' o 'destino'
+
+  // Reemplaza con tu API Key de Google Places
+  static const String _googlePlacesApiKey = ApiConfig.googleMapsApiKey;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {
+        _tabActual = _tabController.index;
+        _modoSeleccionMapa = _tabActual == 0 ? 'origen' : 'destino';
+      });
+    });
     _cargarInfo();
+    _obtenerUbicacionActual();
     widget.socket.on('ubicacion-conductor-desactivada', _handleUbicacionDesactivada);
+  }
+
+  Future<void> _obtenerUbicacionActual() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _ubicacionActual = LatLng(position.latitude, position.longitude);
+      });
+
+      // Sugerir ubicación actual como origen
+      if (_origenSeleccionado == null) {
+        final detallesUbicacionActual = await _obtenerDireccionDeCoordinadas(_ubicacionActual);
+        if (detallesUbicacionActual != null) {
+          setState(() {
+            _origenSeleccionado = detallesUbicacionActual;
+            _origenController.text = detallesUbicacionActual['nombre'];
+          });
+        }
+      }
+    } catch (e) {
+      print('Error obteniendo ubicación: $e');
+    }
   }
 
   void _handleUbicacionDesactivada(dynamic data) {
@@ -81,13 +159,281 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
     });
   }
 
+  Future<void> _buscarUbicaciones(String query, bool esOrigen) async {
+    if (query.length < 3) {
+      setState(() {
+        if (esOrigen) {
+          _sugerenciasOrigen = [];
+        } else {
+          _sugerenciasDestino = [];
+        }
+      });
+      return;
+    }
+
+    setState(() {
+      if (esOrigen) {
+        _buscandoOrigenes = true;
+      } else {
+        _buscandoDestinos = true;
+      }
+    });
+
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json'
+            '?input=${Uri.encodeComponent(query)}'
+            '&key=$_googlePlacesApiKey'
+            '&types=establishment|geocode'
+            '&language=es'
+            '&components=country:ec',
+      );
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['status'] == 'OK') {
+          final List<Map<String, dynamic>> sugerencias = [];
+
+          for (var prediction in data['predictions']) {
+            sugerencias.add({
+              'placeId': prediction['place_id'],
+              'descripcion': prediction['description'],
+              'nombrePrincipal': prediction['structured_formatting']['main_text'],
+              'nombreSecundario': prediction['structured_formatting']['secondary_text'] ?? '',
+            });
+          }
+
+          setState(() {
+            if (esOrigen) {
+              _sugerenciasOrigen = sugerencias;
+            } else {
+              _sugerenciasDestino = sugerencias;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error al buscar ubicaciones: $e');
+    } finally {
+      setState(() {
+        if (esOrigen) {
+          _buscandoOrigenes = false;
+        } else {
+          _buscandoDestinos = false;
+        }
+      });
+    }
+  }
+
+  Future<Map<String, dynamic>?> _obtenerDetallesLugar(String placeId) async {
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/details/json'
+            '?place_id=$placeId'
+            '&key=$_googlePlacesApiKey'
+            '&fields=name,formatted_address,geometry'
+            '&language=es',
+      );
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['status'] == 'OK') {
+          final result = data['result'];
+          final geometry = result['geometry']['location'];
+
+          return {
+            'nombre': result['name'],
+            'direccion': result['formatted_address'],
+            'latitud': geometry['lat'],
+            'longitud': geometry['lng'],
+            'placeId': placeId,
+          };
+        }
+      }
+    } catch (e) {
+      print('Error al obtener detalles del lugar: $e');
+    }
+
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> _obtenerDireccionDeCoordinadas(LatLng coordenadas) async {
+    setState(() {
+      _obteniendoUbicacion = true;
+    });
+
+    try {
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json'
+            '?latlng=${coordenadas.latitude},${coordenadas.longitude}'
+            '&key=$_googlePlacesApiKey'
+            '&language=es',
+      );
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final result = data['results'][0];
+
+          return {
+            'nombre': result['formatted_address'].split(',')[0],
+            'direccion': result['formatted_address'],
+            'latitud': coordenadas.latitude,
+            'longitud': coordenadas.longitude,
+            'placeId': result['place_id'] ?? '',
+          };
+        }
+      }
+    } catch (e) {
+      print('Error al obtener dirección: $e');
+    } finally {
+      setState(() {
+        _obteniendoUbicacion = false;
+      });
+    }
+
+    return null;
+  }
+
+  void _seleccionarUbicacion(Map<String, dynamic> sugerencia, bool esOrigen) async {
+    final detalles = await _obtenerDetallesLugar(sugerencia['placeId']);
+
+    if (detalles != null) {
+      setState(() {
+        if (esOrigen) {
+          _origenSeleccionado = detalles;
+          _origenController.text = detalles['nombre'];
+          _sugerenciasOrigen = [];
+        } else {
+          _destinoSeleccionado = detalles;
+          _destinoController.text = detalles['nombre'];
+          _sugerenciasDestino = [];
+        }
+        _actualizarMarcadores();
+      });
+    }
+  }
+
+  void _seleccionarUbicacionEnMapa(LatLng ubicacion) async {
+    final detalles = await _obtenerDireccionDeCoordinadas(ubicacion);
+
+    if (detalles != null) {
+      setState(() {
+        if (_modoSeleccionMapa == 'origen') {
+          _origenSeleccionado = detalles;
+          _origenController.text = detalles['nombre'];
+          _sugerenciasOrigen = [];
+        } else {
+          _destinoSeleccionado = detalles;
+          _destinoController.text = detalles['nombre'];
+          _sugerenciasDestino = [];
+        }
+        _actualizarMarcadores();
+      });
+    }
+  }
+
+  void _actualizarMarcadores() {
+    Set<Marker> nuevosMarkers = {};
+
+    if (_origenSeleccionado != null) {
+      nuevosMarkers.add(
+        Marker(
+          markerId: const MarkerId('origen'),
+          position: LatLng(_origenSeleccionado!['latitud'], _origenSeleccionado!['longitud']),
+          infoWindow: InfoWindow(
+            title: 'Origen',
+            snippet: _origenSeleccionado!['nombre'],
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        ),
+      );
+    }
+
+    if (_destinoSeleccionado != null) {
+      nuevosMarkers.add(
+        Marker(
+          markerId: const MarkerId('destino'),
+          position: LatLng(_destinoSeleccionado!['latitud'], _destinoSeleccionado!['longitud']),
+          infoWindow: InfoWindow(
+            title: 'Destino',
+            snippet: _destinoSeleccionado!['nombre'],
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
+
+    setState(() {
+      _markers = nuevosMarkers;
+    });
+  }
+
+  void _limpiarUbicacion(bool esOrigen) {
+    setState(() {
+      if (esOrigen) {
+        _origenSeleccionado = null;
+        _origenController.clear();
+        _sugerenciasOrigen = [];
+      } else {
+        _destinoSeleccionado = null;
+        _destinoController.clear();
+        _sugerenciasDestino = [];
+      }
+      _actualizarMarcadores();
+    });
+  }
+
+  void _toggleMapa() {
+    setState(() {
+      _mostrandoMapa = !_mostrandoMapa;
+    });
+  }
+
+  void _usarUbicacionActual() async {
+    final detallesUbicacionActual = await _obtenerDireccionDeCoordinadas(_ubicacionActual);
+    if (detallesUbicacionActual != null) {
+      setState(() {
+        _origenSeleccionado = detallesUbicacionActual;
+        _origenController.text = detallesUbicacionActual['nombre'];
+        _sugerenciasOrigen = [];
+        _actualizarMarcadores();
+      });
+    }
+  }
+
   @override
   void dispose() {
     widget.socket.off('ubicacion-conductor-desactivada', _handleUbicacionDesactivada);
+    _origenController.dispose();
+    _destinoController.dispose();
+    _tabController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
   Future<void> _enviarSolicitud() async {
+    if (_origenSeleccionado == null || _destinoSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_origenSeleccionado == null
+              ? 'Por favor selecciona un punto de partida'
+              : 'Por favor selecciona un destino'),
+          backgroundColor: ClienteStyles.warningColor,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _enviandoSolicitud = true;
     });
@@ -129,7 +475,6 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
       }
     }
 
-    // Escuchar respuesta del servidor (una sola vez)
     void _onSolicitudCreada(data) {
       widget.socket.off('solicitud:creada', _onSolicitudCreada);
       widget.socket.off('solicitud:error', _onSolicitudError);
@@ -139,14 +484,13 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
         _enviandoSolicitud = false;
       });
 
-      // Notificación push (opcional)
       _notificacionController.enviarNotificacion(
         emisorId: clienteId,
         rolEmisor: 'cliente',
         usuarioId: conductorId,
         rol: 'conductor',
         titulo: 'Nueva solicitud de transporte',
-        cuerpo: 'El cliente $nombreCliente ha solicitado un viaje.',
+        cuerpo: 'El cliente $nombreCliente ha solicitado un viaje desde ${_origenSeleccionado!['nombre']} a ${_destinoSeleccionado!['nombre']}.',
       );
 
       if (mounted) {
@@ -178,7 +522,6 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
         }
 
         print("escuchando viaje:iniciado");
-        // Escuchar cuando el viaje se inicie
         widget.socket.on('viaje:iniciado', (viajeData) {
           widget.socket.off('viaje:iniciado');
 
@@ -216,14 +559,26 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
     widget.socket.on('solicitud:error', _onSolicitudError);
     widget.socket.on('solicitud:estadoActualizado', _onSolicitudEstadoActualizado);
 
-
-    // Emitir la solicitud
+    // Emitir la solicitud con información del origen y destino
     widget.socket.emit('solicitud:crear', {
       'clienteId': clienteId,
       'conductorId': conductorId,
+      'origen': {
+        'nombre': _origenSeleccionado!['nombre'],
+        'direccion': _origenSeleccionado!['direccion'],
+        'latitud': _origenSeleccionado!['latitud'],
+        'longitud': _origenSeleccionado!['longitud'],
+        'placeId': _origenSeleccionado!['placeId'],
+      },
+      'destino': {
+        'nombre': _destinoSeleccionado!['nombre'],
+        'direccion': _destinoSeleccionado!['direccion'],
+        'latitud': _destinoSeleccionado!['latitud'],
+        'longitud': _destinoSeleccionado!['longitud'],
+        'placeId': _destinoSeleccionado!['placeId'],
+      },
     });
   }
-
 
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Padding(
@@ -259,6 +614,405 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCampoUbicacion({
+    required String titulo,
+    required TextEditingController controller,
+    required List<Map<String, dynamic>> sugerencias,
+    required Map<String, dynamic>? ubicacionSeleccionada,
+    required bool buscando,
+    required bool esOrigen,
+    required IconData icono,
+    required Color color,
+    String? hintText,
+    Widget? botonExtra,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icono, color: color),
+            SizedBox(width: ClienteStyles.spacing8),
+            Text(
+              titulo,
+              style: ClienteStyles.cardTitle.copyWith(fontSize: 16),
+            ),
+            if (botonExtra != null) ...[
+              Spacer(),
+              botonExtra,
+            ],
+          ],
+        ),
+        SizedBox(height: ClienteStyles.spacing16),
+
+        // Campo de búsqueda
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hintText ?? 'Buscar $titulo...',
+            prefixIcon: Icon(Icons.search_rounded),
+            suffixIcon: ubicacionSeleccionada != null
+                ? IconButton(
+              icon: Icon(Icons.clear_rounded),
+              onPressed: () => _limpiarUbicacion(esOrigen),
+            )
+                : buscando
+                ? Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: color,
+                ),
+              ),
+            )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+              borderSide: BorderSide(color: color.withValues(alpha: 0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+              borderSide: BorderSide(color: color, width: 2),
+            ),
+          ),
+          onChanged: (value) {
+            if (ubicacionSeleccionada == null) {
+              _buscarUbicaciones(value, esOrigen);
+            }
+          },
+          readOnly: ubicacionSeleccionada != null,
+        ),
+
+        // Sugerencias
+        if (sugerencias.isNotEmpty && ubicacionSeleccionada == null) ...[
+          SizedBox(height: ClienteStyles.spacing8),
+          Container(
+            constraints: BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: sugerencias.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 1,
+                color: color.withValues(alpha: 0.2),
+              ),
+              itemBuilder: (context, index) {
+                final sugerencia = sugerencias[index];
+                return ListTile(
+                  leading: Icon(
+                    Icons.location_on_outlined,
+                    color: color,
+                    size: 20,
+                  ),
+                  title: Text(
+                    sugerencia['nombrePrincipal'],
+                    style: ClienteStyles.bodyText.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: sugerencia['nombreSecundario'].isNotEmpty
+                      ? Text(
+                    sugerencia['nombreSecundario'],
+                    style: ClienteStyles.bodyText.copyWith(
+                      fontSize: 12,
+                      color: ClienteStyles.textSecondary,
+                    ),
+                  )
+                      : null,
+                  onTap: () => _seleccionarUbicacion(sugerencia, esOrigen),
+                  dense: true,
+                );
+              },
+            ),
+          ),
+        ],
+
+        // Ubicación seleccionada
+        if (ubicacionSeleccionada != null) ...[
+          SizedBox(height: ClienteStyles.spacing16),
+          Container(
+            padding: const EdgeInsets.all(ClienteStyles.spacing16),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+              border: Border.all(
+                color: color.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_rounded,
+                      color: color,
+                      size: 20,
+                    ),
+                    SizedBox(width: ClienteStyles.spacing8),
+                    Text(
+                      '$titulo seleccionado',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Spacer(),
+                    IconButton(
+                      onPressed: () => _limpiarUbicacion(esOrigen),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: color,
+                        size: 20,
+                      ),
+                      constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+                SizedBox(height: ClienteStyles.spacing8),
+                Text(
+                  ubicacionSeleccionada['nombre'],
+                  style: ClienteStyles.bodyText.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  ubicacionSeleccionada['direccion'],
+                  style: ClienteStyles.bodyText.copyWith(
+                    fontSize: 14,
+                    color: ClienteStyles.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildUbicacionesSelector() {
+    return Container(
+      decoration: ClienteStyles.cardDecoration,
+      child: Column(
+        children: [
+          // Header con botón de mapa
+          Padding(
+            padding: const EdgeInsets.all(ClienteStyles.spacing16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.route_rounded,
+                      color: ClienteStyles.primaryGreen,
+                    ),
+                    SizedBox(width: ClienteStyles.spacing8),
+                    Text(
+                      'Seleccionar ruta',
+                      style: ClienteStyles.cardTitle.copyWith(fontSize: 18),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: _toggleMapa,
+                  icon: Icon(
+                    _mostrandoMapa ? Icons.list_rounded : Icons.map_rounded,
+                    size: 20,
+                  ),
+                  label: Text(_mostrandoMapa ? 'Lista' : 'Mapa'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: ClienteStyles.primaryGreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (_mostrandoMapa) ...[
+            // Pestañas para modo de selección en mapa
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: ClienteStyles.spacing16),
+              decoration: BoxDecoration(
+                color: ClienteStyles.backgroundLight,
+                borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                tabs: [
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.my_location, size: 16),
+                        SizedBox(width: 4),
+                        Text('Origen'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.location_on, size: 16),
+                        SizedBox(width: 4),
+                        Text('Destino'),
+                      ],
+                    ),
+                  ),
+                ],
+                labelColor: ClienteStyles.primaryGreen,
+                unselectedLabelColor: ClienteStyles.textSecondary,
+                indicator: BoxDecoration(
+                  color: ClienteStyles.primaryGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                ),
+              ),
+            ),
+            SizedBox(height: ClienteStyles.spacing16),
+
+            // Mapa
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClienteStyles.spacing16),
+              child: Container(
+                height: 300,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                  border: Border.all(color: ClienteStyles.accentBlue),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                  child: GoogleMap(
+                    onMapCreated: (GoogleMapController controller) {
+                      _mapController = controller;
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: _ubicacionActual,
+                      zoom: 13.0,
+                    ),
+                    markers: _markers,
+                    onTap: _seleccionarUbicacionEnMapa,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                    zoomControlsEnabled: true,
+                    mapToolbarEnabled: false,
+                  ),
+                ),
+              ),
+            ),
+
+            SizedBox(height: ClienteStyles.spacing12),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: ClienteStyles.spacing16),
+              child: Column(
+                children: [
+                  if (_obteniendoUbicacion)
+                    Container(
+                      padding: const EdgeInsets.all(ClienteStyles.spacing12),
+                      decoration: BoxDecoration(
+                        color: ClienteStyles.accentBlue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(ClienteStyles.radiusMedium),
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: ClienteStyles.accentBlue,
+                            ),
+                          ),
+                          SizedBox(width: ClienteStyles.spacing8),
+                          Text(
+                            'Obteniendo dirección...',
+                            style: TextStyle(
+                              color: ClienteStyles.accentBlue,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  Text(
+                    _modoSeleccionMapa == 'origen'
+                        ? 'Toca en el mapa para seleccionar el punto de partida'
+                        : 'Toca en el mapa para seleccionar el destino',
+                    style: ClienteStyles.bodyText.copyWith(
+                      fontSize: 14,
+                      color: ClienteStyles.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: ClienteStyles.spacing16),
+          ] else ...[
+            // Formularios de origen y destino
+            Padding(
+              padding: const EdgeInsets.all(ClienteStyles.spacing16),
+              child: Column(
+                children: [
+                  // Campo de origen
+                  _buildCampoUbicacion(
+                    titulo: 'Punto de partida',
+                    controller: _origenController,
+                    sugerencias: _sugerenciasOrigen,
+                    ubicacionSeleccionada: _origenSeleccionado,
+                    buscando: _buscandoOrigenes,
+                    esOrigen: true,
+                    icono: Icons.my_location_rounded,
+                    color: ClienteStyles.primaryGreen,
+                    hintText: 'Buscar punto de partida...',
+                    botonExtra: IconButton(
+                      onPressed: _usarUbicacionActual,
+                      icon: Icon(
+                        Icons.gps_fixed_rounded,
+                        color: ClienteStyles.primaryGreen,
+                        size: 20,
+                      ),
+                      tooltip: 'Usar ubicación actual',
+                    ),
+                  ),
+
+                  SizedBox(height: ClienteStyles.spacing24),
+
+                  // Campo de destino
+                  _buildCampoUbicacion(
+                    titulo: 'Destino',
+                    controller: _destinoController,
+                    sugerencias: _sugerenciasDestino,
+                    ubicacionSeleccionada: _destinoSeleccionado,
+                    buscando: _buscandoDestinos,
+                    esOrigen: false,
+                    icono: Icons.location_on_rounded,
+                    color: Colors.red,
+                    hintText: 'Buscar destino...',
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -312,6 +1066,11 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Selector de ubicaciones
+            _buildUbicacionesSelector(),
+
+            SizedBox(height: ClienteStyles.spacing16),
+
             // Tarjeta de información del conductor
             Container(
               decoration: ClienteStyles.cardDecoration,
@@ -498,7 +1257,10 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
                     ),
                     SizedBox(height: ClienteStyles.spacing8),
                     Text(
-                      'Notificación enviada al conductor ${_infoConductor!['nombre']}.\nEsperando respuesta (puede tardar hasta 5 minutos).',
+                      'Solicitud enviada al conductor ${_infoConductor!['nombre']} '
+                          'para ir desde ${_origenSeleccionado?['nombre'] ?? 'origen'} '
+                          'hasta ${_destinoSeleccionado?['nombre'] ?? 'destino'}.\n'
+                          'Esperando respuesta (puede tardar hasta 5 minutos).',
                       style: ClienteStyles.bodyText.copyWith(
                         fontSize: 14,
                         color: ClienteStyles.accentBlue,
@@ -512,7 +1274,9 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
               SizedBox(
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: _enviandoSolicitud ? null : _enviarSolicitud,
+                  onPressed: (_enviandoSolicitud || _origenSeleccionado == null || _destinoSeleccionado == null)
+                      ? null
+                      : _enviarSolicitud,
                   icon: _enviandoSolicitud
                       ? SizedBox(
                     width: 20,
@@ -526,7 +1290,11 @@ class _InfoConductorClienteState extends State<InfoConductorCliente> {
                   )
                       : Icon(Icons.directions_car_rounded),
                   label: Text(
-                    _enviandoSolicitud ? 'Enviando...' : 'Solicitar Transporte',
+                    _enviandoSolicitud
+                        ? 'Enviando...'
+                        : (_origenSeleccionado == null || _destinoSeleccionado == null)
+                        ? 'Selecciona origen y destino'
+                        : 'Solicitar Transporte',
                     style: TextStyle(fontSize: 16),
                   ),
                   style: ClienteStyles.primaryButtonStyle.copyWith(

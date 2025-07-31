@@ -3,26 +3,30 @@ const Cliente = require('../models/cliente');
 
 module.exports = (socket, io) => {
 
-  // 1. Cliente envía solicitud a un conductor
   socket.on('solicitud:crear', async (data) => {
     try {
-      const { clienteId, conductorId } = data;
-      if (!clienteId || !conductorId) {
-        return socket.emit('solicitud:error', 'clienteId y conductorId son requeridos');
+      const { clienteId, conductorId, destino, origen } = data;
+
+      if (!clienteId || !conductorId || !destino || !origen) {
+        return socket.emit('solicitud:error', 'clienteId, conductorId, destino y origen son requeridos');
       }
 
-      const solicitud = await SolicitudTransporte.create({ clienteId, conductorId });
+      // Crear la solicitud incluyendo el destino
+      const solicitud = await SolicitudTransporte.create({
+        clienteId,
+        conductorId,
+        destino, // Guardamos todo el objeto: nombre, dirección, lat, lng, placeId
+        origen // Guardamos el origen también
+      });
 
-      const solicitudes = await SolicitudTransporte.find({ 
-        conductorId, 
-        estado: 'pendiente' 
+      const solicitudes = await SolicitudTransporte.find({
+        conductorId,
+        estado: 'pendiente'
       }).populate('clienteId', 'nombre email telefono tokenFCM');
 
-      // Notificar al cliente y al conductor (si están conectados)
       socket.emit('solicitud:creada', solicitud);
+      console.log(`Solicitud creada por cliente ${clienteId} para conductor ${conductorId}, destino: ${destino.direccion}`);
 
-      console.log(`Solicitud creada por cliente ${clienteId} para conductor ${conductorId}`);
-      // Emitir solo al conductor específico (si está conectado)
       io.to(`conductor_${conductorId}`).emit('solicitud:lista', solicitudes);
 
     } catch (err) {
@@ -31,15 +35,16 @@ module.exports = (socket, io) => {
     }
   });
 
+
   // 2. Conductor consulta sus solicitudes pendientes
   socket.on('solicitud:obtener', async (data) => {
     try {
       const { conductorId } = data;
       if (!conductorId) return socket.emit('solicitud:error', 'conductorId requerido');
 
-      const solicitudes = await SolicitudTransporte.find({ 
-        conductorId, 
-        estado: 'pendiente' 
+      const solicitudes = await SolicitudTransporte.find({
+        conductorId,
+        estado: 'pendiente'
       }).populate('clienteId', 'nombre email telefono tokenFCM');
 
       socket.emit('solicitud:lista', solicitudes);

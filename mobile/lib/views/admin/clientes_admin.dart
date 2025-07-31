@@ -166,12 +166,11 @@ class _StatusBadge extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
-  final Color? color;
-  const _InfoRow({required this.icon, required this.text, this.color});
+  const _InfoRow({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = color ?? Colors.grey[600];
+    final iconColor = Colors.grey[600];
     return Row(
       children: [
         Icon(icon, size: 18, color: iconColor),
