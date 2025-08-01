@@ -111,7 +111,7 @@ class _AgregarUbicacionClienteState extends State<AgregarUbicacionCliente> with 
 
     try {
       final posicion = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high
+          locationSettings: AndroidSettings(accuracy: LocationAccuracy.high)
       );
       _posicion = posicion;
 

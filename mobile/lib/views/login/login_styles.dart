@@ -312,7 +312,6 @@ class LoginStyles {
       primary: primaryGreen,
       secondary: primaryNavy,
       surface: surfaceWhite,
-      background: backgroundLight,
       error: errorColor,
     ),
     scaffoldBackgroundColor: backgroundLight,

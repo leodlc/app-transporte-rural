@@ -297,7 +297,6 @@ class ClienteStyles {
       primary: primaryGreen,
       secondary: accentBlue,
       surface: surfaceWhite,
-      background: backgroundLight,
       error: errorColor,
     ),
     scaffoldBackgroundColor: backgroundLight,

@@ -302,7 +302,6 @@ class ConductorStyles {
       primary: primaryNavy,
       secondary: accentBlue,
       surface: surfaceWhite,
-      background: backgroundLight,
       error: errorColor,
     ),
     scaffoldBackgroundColor: backgroundLight,
