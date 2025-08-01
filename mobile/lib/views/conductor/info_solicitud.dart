@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/views/conductor/conductor_styles.dart';
 import 'package:mobile/ws/SocketManager.dart';
 import '../../controllers/notificacion_controller.dart';
-import 'viaje_conductor.dart';
+import 'viaje/viaje_conductor.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:mobile/utils/geolocator_helper.dart';
@@ -157,8 +157,11 @@ class _InfoSolicitudState extends State<InfoSolicitud> {
 
       _socketManager.emit('solicitud:obtener', {'conductorId': _conductorId});
 
+
+      print('🔵 Emisor (conductor): ${nuevoEstado}');
       // NUEVA LÓGICA: Si la solicitud fue aceptada, iniciar el viaje y navegar
       if (nuevoEstado == 'aceptada') {
+        print('🔵 Emisor (conductor): ${widget.solicitud['conductorId']}');
         // Iniciar el viaje
         _socketManager.emit('viaje:iniciar', {
           'solicitudId': widget.solicitud['_id'],

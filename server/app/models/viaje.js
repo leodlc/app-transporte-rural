@@ -31,7 +31,9 @@ const viajeSchema = new mongoose.Schema({
     lng: Number
   },
   motivoCancelacion: String,
-  canceladoPor: { type: String, enum: ['cliente', 'conductor'] }
+  codigoSeguridad: String,
+  intentosCodigoSeguridad: Number,
+  canceladoPor: { type: String, enum: ['cliente', 'conductor', 'sistema'] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Viaje', viajeSchema);

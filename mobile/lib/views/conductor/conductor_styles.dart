@@ -20,7 +20,7 @@ class ConductorStyles {
   static const Color warningColor = Color(0xFFF57C00);
 
   // Colores específicos para conductor
-  static const Color primaryColor = Color.fromARGB(255, 7, 83, 10);
+  static const Color primaryColor = primaryGreen;
   static const Color drawerHeaderGradientStart = primaryNavy;
   static const Color drawerHeaderGradientEnd = Color.fromARGB(255, 9, 100, 56);
   static const Color selectedItemColor = primaryNavy;
