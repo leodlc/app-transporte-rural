@@ -264,7 +264,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
   }
 
   Future<void> _obtenerRuta(LatLng origen, LatLng destino, Color color) async {
-    print('Obteniendo ruta de $origen a $destino');
     final String url = 'https://maps.googleapis.com/maps/api/directions/json'
         '?origin=${origen.latitude},${origen.longitude}'
         '&destination=${destino.latitude},${destino.longitude}'
@@ -351,13 +350,6 @@ class _ViajeConductorState extends State<ViajeConductor> {
     final random = Random();
     final numero = random.nextInt(17) + 1; // 1 a 17
     final path = 'audios/audio_${numero.toString().padLeft(2, '0')}.mp3';
-
-    print('Reproduciendo audio: $path');
-    print('Reproduciendo audio: $path');
-    print('Reproduciendo audio: $path');
-    print('Reproduciendo audio: $path');
-    print('Reproduciendo audio: $path');
-    print('Reproduciendo audio: $path');
 
     final player = AudioPlayer();
     player.play(AssetSource(path));

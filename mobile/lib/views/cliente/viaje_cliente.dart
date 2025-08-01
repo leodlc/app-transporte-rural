@@ -335,9 +335,9 @@ class _ViajeClienteState extends State<ViajeCliente> {
               Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: ClienteStyles.accentBlue.withOpacity(0.1),
+                  color: ClienteStyles.accentBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: ClienteStyles.accentBlue.withOpacity(0.3)),
+                  border: Border.all(color: ClienteStyles.accentBlue.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   codigo,
@@ -505,8 +505,8 @@ class _ViajeClienteState extends State<ViajeCliente> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: ClienteStyles.cardDecoration.copyWith(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -542,7 +542,7 @@ class _ViajeClienteState extends State<ViajeCliente> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: ClienteStyles.primaryGreen.withOpacity(0.1),
+              color: ClienteStyles.primaryGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
@@ -571,9 +571,9 @@ class _ViajeClienteState extends State<ViajeCliente> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: ClienteStyles.accentBlue.withOpacity(0.1),
+                    color: ClienteStyles.accentBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: ClienteStyles.accentBlue.withOpacity(0.3)),
+                    border: Border.all(color: ClienteStyles.accentBlue.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     'Conductor Verificado',
@@ -658,7 +658,7 @@ class _ViajeClienteState extends State<ViajeCliente> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: ClienteStyles.warningColor.withOpacity(0.1),
+                      color: ClienteStyles.warningColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(

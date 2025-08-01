@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/views/conductor/conductor_styles.dart';
 
@@ -6,7 +5,7 @@ class ClienteInfoCard extends StatelessWidget {
 
   final Map<String, dynamic> clienteData;
 
-  ClienteInfoCard({required this.clienteData});
+  const ClienteInfoCard({required this.clienteData});
 
   @override
   Widget build(BuildContext context) {

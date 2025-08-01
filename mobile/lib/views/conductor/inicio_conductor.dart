@@ -32,7 +32,6 @@ class _InicioConductorState extends State<InicioConductor> {
         });
       } else {
         // Manejar error de inicialización
-        print('Error al inicializar socket de conductor');
         setState(() {
           _isLoading = false;
           _isConnected = false;

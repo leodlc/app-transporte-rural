@@ -169,7 +169,7 @@ class ClienteStyles {
     borderRadius: BorderRadius.circular(radiusLarge),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withValues(alpha: 0.05),
         blurRadius: 10,
         offset: const Offset(0, 2),
       ),
@@ -182,7 +182,7 @@ class ClienteStyles {
     borderRadius: BorderRadius.circular(radiusMedium),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.08),
+        color: Colors.black.withValues(alpha: 0.08),
         blurRadius: 8,
         offset: const Offset(0, 2),
       ),
@@ -234,7 +234,7 @@ class ClienteStyles {
   // Estilo para ListTile del drawer
   static ListTileThemeData drawerListTileTheme = ListTileThemeData(
     selectedColor: primaryGreen,
-    selectedTileColor: primaryGreen.withOpacity(0.1),
+    selectedTileColor: primaryGreen.withValues(alpha: 0.1),
     iconColor: textSecondary,
     textColor: textPrimary,
     horizontalTitleGap: spacing12,
@@ -275,10 +275,10 @@ class ClienteStyles {
   // Estilo para badges/chips
   static BoxDecoration chipDecoration({Color? color}) {
     return BoxDecoration(
-      color: (color ?? primaryGreen).withOpacity(0.1),
+      color: (color ?? primaryGreen).withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(radiusCircular),
       border: Border.all(
-        color: (color ?? primaryGreen).withOpacity(0.3),
+        color: (color ?? primaryGreen).withValues(alpha: 0.3),
       ),
     );
   }

@@ -40,7 +40,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(LoginStyles.spacing24),
                     decoration: BoxDecoration(
-                      color: LoginStyles.primaryGreen.withOpacity(0.1),
+                      color: LoginStyles.primaryGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -96,7 +96,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
@@ -108,7 +108,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(LoginStyles.spacing16),
                                   decoration: BoxDecoration(
-                                    color: LoginStyles.primaryGreen.withOpacity(0.1),
+                                    color: LoginStyles.primaryGreen.withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -163,7 +163,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 10,
                                   offset: const Offset(0, 2),
                                 ),
@@ -175,7 +175,7 @@ class OpcionRegistroLogin extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(LoginStyles.spacing16),
                                   decoration: BoxDecoration(
-                                    color: LoginStyles.primaryNavy.withOpacity(0.1),
+                                    color: LoginStyles.primaryNavy.withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(

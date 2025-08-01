@@ -51,7 +51,7 @@ class _MainLoginState extends State<MainLogin> {
                       borderRadius: BorderRadius.circular(LoginStyles.radiusXLarge),
                       boxShadow: [
                         BoxShadow(
-                          color: LoginStyles.primaryGreen.withOpacity(0.2),
+                          color: LoginStyles.primaryGreen.withValues(alpha: 0.2),
                           blurRadius: 30,
                           offset: const Offset(0, 10),
                         ),

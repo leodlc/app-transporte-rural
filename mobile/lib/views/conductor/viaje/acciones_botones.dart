@@ -25,7 +25,7 @@ class AccionesBotones extends StatelessWidget {
   Widget build(BuildContext context) {
     List<Widget> botones = [];
 
-    void _regresarAInicio() {
+    void regresarAInicio() {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const MainConductor()),
@@ -36,7 +36,7 @@ class AccionesBotones extends StatelessWidget {
     switch (estadoViaje) {
       case 'cancelado':
         botones.add(ElevatedButton.icon(
-          onPressed: _regresarAInicio,
+          onPressed: regresarAInicio,
           icon: Icon(Icons.home, color: Colors.white,),
           label: Text('Regresar a inicio', style: TextStyle(color: Colors.white),),
           style: ElevatedButton.styleFrom(

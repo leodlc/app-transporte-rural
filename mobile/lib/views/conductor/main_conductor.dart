@@ -48,7 +48,6 @@ class _MainConductorState extends State<MainConductor> {
           rol: rol,
           tokenFCM: token,
         );
-        print("Token FCM registrado exitosamente para $rol");
       } catch (e) {
         print(" Error registrando token FCM: $e");
       }
@@ -57,7 +56,6 @@ class _MainConductorState extends State<MainConductor> {
 
   Future<void> _obtenerYGuardarTokenFCM() async {
     final token = await FirebaseMessaging.instance.getToken();
-    print("FCM Token obtenido: $token");
 
     if (token != null) {
       final prefs = await SharedPreferences.getInstance();
@@ -185,7 +183,7 @@ class _MainConductorState extends State<MainConductor> {
                       ),
                       selected: _selectedIndex == 0,
                       selectedColor: ConductorStyles.selectedItemColor,
-                      selectedTileColor: ConductorStyles.selectedItemColor.withOpacity(0.1),
+                      selectedTileColor: ConductorStyles.selectedItemColor.withValues(alpha: 0.1),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
                       ),
@@ -207,7 +205,7 @@ class _MainConductorState extends State<MainConductor> {
                       ),
                       selected: _selectedIndex == 1,
                       selectedColor: ConductorStyles.selectedItemColor,
-                      selectedTileColor: ConductorStyles.selectedItemColor.withOpacity(0.1),
+                      selectedTileColor: ConductorStyles.selectedItemColor.withValues(alpha: 0.1),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(ConductorStyles.radiusMedium),
                       ),

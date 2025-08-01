@@ -158,7 +158,7 @@ class _SolicitudesConductorState extends State<SolicitudesConductor> {
       return {'distancia': null, 'nombre': o['nombre'], 'direccion': o['direccion']};
     }
 
-    final meters = await Geolocator.distanceBetween(
+    final meters = Geolocator.distanceBetween(
       _conductorLatitud!, _conductorLongitud!, latO, lngO,
     );
     final km = meters / 1000;
@@ -183,7 +183,7 @@ class _SolicitudesConductorState extends State<SolicitudesConductor> {
       return {'distancia': null, 'nombre': d['nombre'], 'direccion': d['direccion']};
     }
 
-    final meters = await Geolocator.distanceBetween(latO, lngO, latD, lngD);
+    final meters = Geolocator.distanceBetween(latO, lngO, latD, lngD);
     final km = meters / 1000;
     return {
       'distancia': _formatearDistancia(km),

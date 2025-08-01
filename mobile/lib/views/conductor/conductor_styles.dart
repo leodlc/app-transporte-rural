@@ -174,7 +174,7 @@ class ConductorStyles {
     borderRadius: BorderRadius.circular(radiusLarge),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withValues(alpha: 0.05),
         blurRadius: 10,
         offset: const Offset(0, 2),
       ),
@@ -187,7 +187,7 @@ class ConductorStyles {
     borderRadius: BorderRadius.circular(radiusMedium),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.08),
+        color: Colors.black.withValues(alpha: 0.08),
         blurRadius: 8,
         offset: const Offset(0, 2),
       ),
@@ -239,7 +239,7 @@ class ConductorStyles {
   // Estilo para ListTile del drawer
   static ListTileThemeData drawerListTileTheme = ListTileThemeData(
     selectedColor: primaryNavy,
-    selectedTileColor: primaryNavy.withOpacity(0.1),
+    selectedTileColor: primaryNavy.withValues(alpha: 0.1),
     iconColor: textSecondary,
     textColor: textPrimary,
     horizontalTitleGap: spacing12,
@@ -280,10 +280,10 @@ class ConductorStyles {
   // Estilo para badges/chips
   static BoxDecoration chipDecoration({Color? color}) {
     return BoxDecoration(
-      color: (color ?? primaryNavy).withOpacity(0.1),
+      color: (color ?? primaryNavy).withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(radiusCircular),
       border: Border.all(
-        color: (color ?? primaryNavy).withOpacity(0.3),
+        color: (color ?? primaryNavy).withValues(alpha: 0.3),
       ),
     );
   }

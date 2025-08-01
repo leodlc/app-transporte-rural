@@ -157,11 +157,8 @@ class _InfoSolicitudState extends State<InfoSolicitud> {
 
       _socketManager.emit('solicitud:obtener', {'conductorId': _conductorId});
 
-
-      print('🔵 Emisor (conductor): ${nuevoEstado}');
       // NUEVA LÓGICA: Si la solicitud fue aceptada, iniciar el viaje y navegar
       if (nuevoEstado == 'aceptada') {
-        print('🔵 Emisor (conductor): ${widget.solicitud['conductorId']}');
         // Iniciar el viaje
         _socketManager.emit('viaje:iniciar', {
           'solicitudId': widget.solicitud['_id'],

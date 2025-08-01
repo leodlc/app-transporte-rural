@@ -57,7 +57,7 @@ class _DialogoCodigoSeguridadState extends State<DialogoCodigoSeguridad> {
     if (!mounted) return;
 
     if (esCorrecto) {
-      // Si el código es correcto, el evento 'viaje:comenzado' se encargará de todo.
+      // Si el código es correcto, el evento 'viaje:comenzado' se encargará
       // Aquí simplemente cerramos el diálogo devolviendo 'true'.
       Navigator.pop(context, true);
     } else {
