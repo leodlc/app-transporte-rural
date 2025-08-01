@@ -107,6 +107,11 @@ class LoginController {
           break;
         case "conductor":
           endpoint = "/api/1.0/conductor/$userId/clear-token";
+          try {
+            SocketManager.instance.emit("ubicacion:desactivar", {"conductorId": userId});
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error al desactivar ubicación: $e")));
+          }
           break;
         case "admin":
           endpoint = "/api/1.0/admin/$userId/clear-token";
