@@ -107,4 +107,4 @@ flutter run
 
 ## 📄 Licencia
 
-Este proyecto es de uso académico. Para fines comerciales, contactar a los autores.
+Este proyecto es de uso académico. Para fines comerciales, contactar a los autores y al Ingeniero Ricardo R.
