@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import '../../controllers/cliente_controller.dart';
 import '../../controllers/login_controller.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import 'perfil_cliente.dart';
@@ -201,7 +200,7 @@ class _MainClienteState extends State<MainCliente> {
                           vertical: ClienteStyles.spacing8,
                         ),
                         decoration: BoxDecoration(
-                          color: ClienteStyles.surfaceWhite.withOpacity(0.2),
+                          color: ClienteStyles.surfaceWhite.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(ClienteStyles.radiusCircular),
                         ),
                         child: Text(

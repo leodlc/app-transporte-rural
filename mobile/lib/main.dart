@@ -11,6 +11,9 @@ import 'views/conductor/main_conductor.dart';
 import 'services/bloc/notifications_bloc.dart';
 import 'services/localNotification/local_notifications.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver =
+RouteObserver<ModalRoute<void>>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -76,6 +79,7 @@ class _MyAppState extends State<MyApp> {
         title: 'LogisticOne',
         theme: ThemeData(primarySwatch: Colors.blue),
         debugShowCheckedModeBanner: false,
+        navigatorObservers: [routeObserver],
         home: _isLoading
             ? const Scaffold(body: Center(child: CircularProgressIndicator()))
             : _role == null

@@ -111,7 +111,7 @@ class _AgregarUbicacionClienteState extends State<AgregarUbicacionCliente> with 
 
     try {
       final posicion = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high
+          locationSettings: AndroidSettings(accuracy: LocationAccuracy.high)
       );
       _posicion = posicion;
 
@@ -220,7 +220,7 @@ class _AgregarUbicacionClienteState extends State<AgregarUbicacionCliente> with 
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: ClienteStyles.successColor.withOpacity(0.2),
+                  color: ClienteStyles.successColor.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(

@@ -58,7 +58,7 @@ class _FraseCulturalDialogState extends State<FraseCulturalDialog> {
           borderRadius: BorderRadius.circular(LoginStyles.radiusXLarge),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -75,7 +75,7 @@ class _FraseCulturalDialogState extends State<FraseCulturalDialog> {
                 gradient: LinearGradient(
                   colors: [
                     LoginStyles.primaryGreen,
-                    LoginStyles.primaryGreen.withOpacity(0.8),
+                    LoginStyles.primaryGreen.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -135,7 +135,7 @@ class _FraseCulturalDialogState extends State<FraseCulturalDialog> {
                       style: LoginStyles.cardText.copyWith(
                         fontSize: 16,
                         height: 1.6,
-                        color: LoginStyles.textPrimary.withOpacity(0.9),
+                        color: LoginStyles.textPrimary.withValues(alpha: 0.9),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -156,7 +156,7 @@ class _FraseCulturalDialogState extends State<FraseCulturalDialog> {
                           borderRadius: BorderRadius.circular(LoginStyles.radiusMedium),
                         ),
                         elevation: 0,
-                        disabledBackgroundColor: LoginStyles.primaryGreen.withOpacity(0.5),
+                        disabledBackgroundColor: LoginStyles.primaryGreen.withValues(alpha: 0.5),
                       ),
                       child: Text(
                         'Cerrar',

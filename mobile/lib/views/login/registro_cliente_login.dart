@@ -89,7 +89,7 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: primaryGreen.withOpacity(0.1),
+                      color: primaryGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -182,7 +182,7 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: primaryGreen.withOpacity(0.1),
+                        color: primaryGreen.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -225,7 +225,7 @@ class _RegistroClienteLoginState extends State<RegistroClienteLogin> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),

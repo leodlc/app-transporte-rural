@@ -7,10 +7,11 @@ require('./config/firebase'); // Asegura que Firebase se inicializa
 const { initSocket } = require('./config/socket'); // importar socket
 const iniciarJobExpiracionSolicitudes = require('./app/cron/solicitud-expiracion');
 
+
 const app = express();
-const server = http.createServer(app); // Crear servidor HTTP
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0'
+const HOST = '0.0.0.0';
 
 app.use(cors());
 app.use(express.json());
